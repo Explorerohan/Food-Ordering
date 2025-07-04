@@ -14,6 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView as SafeAreaViewContext } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import FoodItemCard from '../components/FoodItemCard';
 import CategoryFilter from '../components/CategoryFilter';
@@ -118,8 +119,29 @@ const DashboardScreen = ({ username }) => {
     </View>
   );
 
+  const handleAddToCart = async (item) => {
+    try {
+      const accessToken = await AsyncStorage.getItem('accessToken');
+      const response = await fetch('http://192.168.1.148:8000/api/cart/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+        },
+        body: JSON.stringify({ food_item_id: item.id, quantity: 1 }),
+      });
+      if (!response.ok) throw new Error('Failed to add to cart');
+      const cartData = await response.json();
+      // Optionally store cartData in AsyncStorage or state for CartScreen
+      await AsyncStorage.setItem('cart', JSON.stringify(cartData));
+      Alert.alert('Added to Cart', `${item.name} has been added to your cart.`);
+    } catch (error) {
+      Alert.alert('Error', 'Could not add to cart. Please try again.');
+    }
+  };
+
   const renderItem = ({ item }) => (
-    <FoodItemCard item={item} onPress={handleFoodItemPress} />
+    <FoodItemCard item={item} onPress={handleFoodItemPress} onAddToCart={handleAddToCart} />
   );
 
   const onRefresh = async () => {
@@ -140,8 +162,8 @@ const DashboardScreen = ({ username }) => {
           <Text style={styles.subtitle}>What would you like to eat today?</Text>
         </View>
         <View style={styles.headerIcons}>
-          <Ionicons name="search-outline" size={24} color="#333" />
-          <Ionicons name="notifications-outline" size={24} color="#333" />
+          <Ionicons name="search-outline" size={24} color="#333" style={{ marginHorizontal: 6 }} />
+          <Ionicons name="notifications-outline" size={24} color="#333" style={{ marginHorizontal: 6 }} />
         </View>
       </View>
     </View>

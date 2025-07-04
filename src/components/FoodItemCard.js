@@ -11,7 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
-const FoodItemCard = ({ item, onPress }) => {
+const FoodItemCard = ({ item, onPress, onAddToCart }) => {
   const smallSize = item.sizes?.find(s => s.size === 'Small');
 
   return (
@@ -40,6 +40,9 @@ const FoodItemCard = ({ item, onPress }) => {
           <Text style={styles.price}>
             {smallSize ? `₹${smallSize.price}` : 'N/A'}
           </Text>
+          <TouchableOpacity style={styles.cartBtn} onPress={(e) => { e.stopPropagation(); onAddToCart(item); }}>
+            <Ionicons name="cart-outline" size={20} color="#FF6B35" />
+          </TouchableOpacity>
         </View>
       </View>
     </TouchableOpacity>
@@ -115,6 +118,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#FF6B35',
+  },
+  cartBtn: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#FF6B35',
+    borderRadius: 20,
+    padding: 6,
+    marginLeft: 8,
   },
 });
 

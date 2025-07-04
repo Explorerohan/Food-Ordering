@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, Alert, Dimensions, TextInput, Platform, ActivityIndicator, Button } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, Alert, Dimensions, TextInput, Platform, ActivityIndicator, Button, Animated, Modal, TouchableWithoutFeedback } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -21,6 +21,53 @@ const FoodDetailScreen = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [reviews, setReviews] = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(true);
+  const [searchText, setSearchText] = useState('');
+  // State for review image modal
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalImage, setModalImage] = useState(null);
+
+  // Dynamic placeholder cycling through food names
+  const foodNames = [
+    'Pizza',
+    'Burger',
+    'Biryani',
+    'Pasta',
+    'Sushi',
+    'Tacos',
+    'Dosa',
+    'Paneer',
+    'Noodles',
+    'Salad',
+  ];
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  const [displayedIndex, setDisplayedIndex] = useState(0);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const slideAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIsAnimating(true);
+      // Animate out (down)
+      Animated.timing(slideAnim, {
+        toValue: 1,
+        duration: 220,
+        useNativeDriver: true,
+      }).start(() => {
+        // After out, update text and animate in
+        setDisplayedIndex((prev) => (prev + 1) % foodNames.length);
+        setPlaceholderIndex((prev) => (prev + 1) % foodNames.length);
+        slideAnim.setValue(-1); // Start new text above
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 220,
+          useNativeDriver: true,
+        }).start(() => {
+          setIsAnimating(false);
+        });
+      });
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [placeholderIndex]);
 
   // Extract sizes
   const sizes = item.sizes || [];
@@ -52,11 +99,32 @@ const FoodDetailScreen = () => {
   };
 
   const handleOrderNow = () => {
-    Alert.alert('Order Placed', `You have ordered 1 x ${item.name} (${selectedSize}, ${selectedSpice}) for ₹${selectedSizeObj?.price}`);
+    const totalPrice = (selectedSizeObj?.price || 0) * quantity;
+    Alert.alert('Order Placed', `You have ordered ${quantity} x ${item.name} (${selectedSize}, ${selectedSpice}) for ₹${totalPrice}`);
   };
 
-  const handleAddToCart = () => {
-    Alert.alert('Added to Cart', `Added 1 x ${item.name} (${selectedSize}, ${selectedSpice}) to cart.`);
+  const handleAddToCart = async () => {
+    try {
+      const accessToken = await AsyncStorage.getItem('accessToken');
+      const response = await fetch('http://192.168.1.148:8000/api/cart/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+        },
+        body: JSON.stringify({
+          food_item_id: item.id,
+          quantity: quantity,
+          size: selectedSize,
+          spice_level: selectedSpice,
+        }),
+      });
+      if (!response.ok) throw new Error('Failed to add to cart');
+      const cartData = await response.json();
+      Alert.alert('Added to Cart', `Added ${quantity} x ${item.name} (${selectedSize}, ${selectedSpice}) to cart.`);
+    } catch (error) {
+      Alert.alert('Error', 'Could not add to cart. Please try again.');
+    }
   };
 
   const pickImage = async () => {
@@ -122,7 +190,7 @@ const FoodDetailScreen = () => {
       }
 
       // Use fetch for FormData
-      const response = await fetch('http://192.168.254.5:8000/api/reviews/', {
+      const response = await fetch('http://192.168.1.148:8000/api/reviews/', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -161,17 +229,123 @@ const FoodDetailScreen = () => {
     ));
   };
 
+  const animateButton = (scaleRef) => {
+    Animated.sequence([
+      Animated.timing(scaleRef, {
+        toValue: 1.2,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleRef, {
+        toValue: 1,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  // --- Header copied from DashboardScreen.js ---
+  const renderHeader = () => (
+    <View style={styles.header}>
+      <View style={styles.headerContent}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBackArrow}>
+          <Ionicons name="arrow-back" size={24} color="#333" />
+        </TouchableOpacity>
+        <View style={styles.headerSearchBox}>
+          <Ionicons name="search-outline" size={20} color="#888" style={styles.headerSearchIcon} />
+          <View style={styles.animatedPlaceholderContainer} pointerEvents="none">
+            <Animated.Text
+              style={[
+                styles.animatedPlaceholder,
+                {
+                  transform: [
+                    {
+                      translateY: slideAnim.interpolate({
+                        inputRange: [-1, 0, 1],
+                        outputRange: [-32, 0, 32],
+                      }),
+                    },
+                  ],
+                  opacity: slideAnim.interpolate({
+                    inputRange: [-1, 0, 1],
+                    outputRange: [0, 1, 0],
+                  }),
+                },
+              ]}
+              numberOfLines={1}
+            >
+              {`Search ${foodNames[displayedIndex]}...`}
+            </Animated.Text>
+          </View>
+          <TextInput
+            style={[styles.headerSearchInput, { position: 'absolute', left: 0, right: 0, width: '100%' }]}
+            placeholder=""
+            value={searchText}
+            onChangeText={setSearchText}
+            underlineColorAndroid="transparent"
+            returnKeyType="search"
+          />
+        </View>
+        <View style={styles.headerIcons}>
+          <Ionicons name="chatbubble-ellipses-outline" size={24} color="#333" style={{ marginHorizontal: 6 }} />
+          <Ionicons name="cart-outline" size={24} color="#333" style={{ marginHorizontal: 6 }} />
+        </View>
+      </View>
+    </View>
+  );
+  // --- End Header ---
+
+  const renderSizeOption = (sizeObj) => (
+    <TouchableOpacity
+      key={sizeObj.size}
+      style={[styles.pillBtn, selectedSize === sizeObj.size && styles.pillBtnActive]}
+      onPress={() => setSelectedSize(sizeObj.size)}
+    >
+      <View style={styles.pillBtnContent}>
+        <Text style={[styles.pillText, selectedSize === sizeObj.size && styles.pillTextActive]}>
+          {sizeObj.size}
+        </Text>
+        {selectedSize === sizeObj.size && (
+          <Ionicons name="checkmark-circle" size={18} color="#fff" style={styles.tickIcon} />
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+
+  const renderSpiceOption = (level) => (
+    <TouchableOpacity
+      key={level}
+      style={[styles.pillBtn, selectedSpice === level && styles.pillBtnActive]}
+      onPress={() => setSelectedSpice(level)}
+    >
+      <View style={styles.pillBtnContent}>
+        <Text style={[styles.pillText, selectedSpice === level && styles.pillTextActive]}>
+          {level}
+        </Text>
+        {selectedSpice === level && (
+          <Ionicons name="checkmark-circle" size={18} color="#fff" style={styles.tickIcon} />
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+
+  // Handler to open modal with image
+  const handleReviewImagePress = (imgUrl) => {
+    setModalImage(imgUrl);
+    setModalVisible(true);
+  };
+
   return (
     <SafeAreaView style={styles.safeArea} edges={["top","left","right"]}>
+      {renderHeader()}
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.imageContainer}>
           <Image source={{ uri: item.image }} style={styles.image} />
-          <TouchableOpacity style={styles.backButtonOverlay} onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={28} color="#fff" />
-          </TouchableOpacity>
         </View>
         <View style={styles.content}>
-          <Text style={styles.price}>₹{selectedSizeObj ? selectedSizeObj.price : 'N/A'}</Text>
+          <View style={styles.priceRow}>
+            <Text style={styles.price}>₹{selectedSizeObj ? selectedSizeObj.price : 'N/A'}</Text>
+          </View>
           {/* Price and name */}
           <Text style={styles.name}>{item.name}</Text>
           <Text style={styles.description}>{item.description}</Text>
@@ -182,17 +356,7 @@ const FoodDetailScreen = () => {
           {/* Size selector */}
           <Text style={styles.sectionTitle}>Choose Size</Text>
           <View style={styles.selectorRow}>
-            {sizes.map((sizeObj) => (
-              <TouchableOpacity
-                key={sizeObj.size}
-                style={[styles.pillBtn, selectedSize === sizeObj.size && styles.pillBtnActive]}
-                onPress={() => setSelectedSize(sizeObj.size)}
-              >
-                <Text style={[styles.pillText, selectedSize === sizeObj.size && styles.pillTextActive]}>
-                  {sizeObj.size}
-                </Text>
-              </TouchableOpacity>
-            ))}
+            {sizes.map(renderSizeOption)}
           </View>
 
           {/* Divider */}
@@ -201,17 +365,7 @@ const FoodDetailScreen = () => {
           {/* Spice level selector */}
           <Text style={styles.sectionTitle}>Choose Spice Level</Text>
           <View style={styles.selectorRow}>
-            {spiceLevels.map((level) => (
-              <TouchableOpacity
-                key={level}
-                style={[styles.pillBtn, selectedSpice === level && styles.pillBtnActive]}
-                onPress={() => setSelectedSpice(level)}
-              >
-                <Text style={[styles.pillText, selectedSpice === level && styles.pillTextActive]}>
-                  {level}
-                </Text>
-              </TouchableOpacity>
-            ))}
+            {spiceLevels.map(renderSpiceOption)}
           </View>
 
           {/* Divider */}
@@ -226,19 +380,37 @@ const FoodDetailScreen = () => {
               {reviews.length > 0 ? (
                 reviews.map((review, idx) => (
                   <View key={idx} style={styles.reviewCard}>
-                    {review.image && (
-                      <Image
-                        source={{ uri: review.image.startsWith('http') ? review.image : `http://192.168.254.5:8000${review.image}` }}
-                        style={styles.reviewImage}
-                      />
-                    )}
-                    <View style={styles.reviewHeader}>
-                      <Text style={styles.reviewUser}>{review.user || 'Anonymous'}</Text>
-                      <View style={styles.reviewStars}>
-                        {renderStars(review.rating)}
+                    <View style={styles.reviewContentRow}>
+                      <View style={styles.reviewContentLeft}>
+                        <View style={styles.reviewHeader}>
+                          <View style={styles.reviewHeaderLeft}>
+                            {review.profile_picture && typeof review.profile_picture === 'string' && review.profile_picture.length > 0 ? (
+                              <Image
+                                source={{ uri: review.profile_picture }}
+                                style={styles.reviewAvatar}
+                              />
+                            ) : (
+                              <Ionicons name="person-circle" size={28} color="#bbb" style={styles.reviewAvatar} />
+                            )}
+                            <Text style={styles.reviewUser}>{review.user || 'Anonymous'}</Text>
+                          </View>
+                          <View style={styles.reviewStars}>
+                            {renderStars(review.rating)}
+                          </View>
+                        </View>
+                        <View style={styles.reviewImageCommentRow}>
+                          <Text style={[styles.reviewComment, { flex: 1 }]}>{review.comment}</Text>
+                          {review.image && typeof review.image === 'string' && review.image.length > 0 && (
+                            <TouchableOpacity onPress={() => handleReviewImagePress(review.image.startsWith('http') ? review.image : `http://192.168.1.148:8000${review.image}`)}>
+                              <Image
+                                source={{ uri: review.image.startsWith('http') ? review.image : `http://192.168.1.148:8000${review.image}` }}
+                                style={styles.reviewImageSmall}
+                              />
+                            </TouchableOpacity>
+                          )}
+                        </View>
                       </View>
                     </View>
-                    <Text style={styles.reviewComment}>{review.comment}</Text>
                   </View>
                 ))
               ) : (
@@ -298,6 +470,24 @@ const FoodDetailScreen = () => {
           <Text style={styles.orderBtnText}>Order Now</Text>
         </TouchableOpacity>
       </View>
+      {/* Modal for large review image */}
+      <Modal
+        visible={modalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalImageContainer}>
+              <Image source={{ uri: modalImage }} style={styles.modalImage} resizeMode="contain" />
+              <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setModalVisible(false)}>
+                <Ionicons name="close" size={32} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -310,44 +500,42 @@ const styles = StyleSheet.create({
   imageContainer: {
     position: 'relative',
     width: '100%',
+    marginTop: -10,
+    paddingTop: 0,
   },
   image: {
     width: '100%',
     height: width * 0.95,
+    marginTop: 0,
     marginBottom: 0,
-  },
-  backButtonOverlay: {
-    position: 'absolute',
-    top: 16,
-    left: 16,
-    zIndex: 10,
-    padding: 4,
+    paddingTop: 0,
   },
   container: {
     flex: 1,
     backgroundColor: '#fff',
   },
   scrollContent: {
-    paddingBottom: 140,
+    paddingBottom: 100,
     paddingTop: 0,
   },
   content: {
-    paddingHorizontal: 24,
-    paddingTop: 28,
+    paddingHorizontal: 12,
+    paddingTop: 0,
     paddingBottom: 0,
   },
   name: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 22,
+    fontWeight: '500',
     color: '#222',
-    marginBottom: 10,
+    marginBottom: 0,
+    marginTop: -6,
     letterSpacing: 0.2,
     textAlign: 'left',
   },
   description: {
     fontSize: 16,
     color: '#666',
-    marginBottom: 8,
+    marginBottom: 4,
     lineHeight: 22,
     letterSpacing: 0.1,
     textAlign: 'left',
@@ -355,7 +543,7 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: '#F0F0F0',
-    marginVertical: 18,
+    marginVertical: 10,
     width: '100%',
     alignSelf: 'center',
   },
@@ -363,7 +551,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#333',
-    marginBottom: 14,
+    marginBottom: 8,
     marginTop: 0,
     letterSpacing: 0.1,
   },
@@ -374,22 +562,23 @@ const styles = StyleSheet.create({
     marginTop: 0,
     marginLeft: 0,
     marginRight: 0,
-    justifyContent: 'flex-start',
+    flexWrap: 'wrap',
   },
   pillBtn: {
     paddingHorizontal: 22,
     paddingVertical: 10,
-    borderRadius: 20,
+    borderRadius: 6,
     backgroundColor: '#F5F5F5',
     borderWidth: 1,
     borderColor: '#E0E0E0',
     marginRight: 10,
-    minWidth: 80,
+    minWidth: 0,
     alignItems: 'center',
   },
   pillBtnActive: {
     backgroundColor: '#FF6B35',
     borderColor: '#FF6B35',
+    borderRadius: 6,
   },
   pillText: {
     fontSize: 16,
@@ -419,7 +608,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FF6B35',
     paddingHorizontal: 18,
     paddingVertical: 12,
-    borderRadius: 24,
+    borderRadius: 6,
     gap: 8,
   },
   cartBtnText: {
@@ -428,10 +617,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   orderBtn: {
-    backgroundColor: '#333',
+    backgroundColor: '#FFD600',
     paddingHorizontal: 24,
     paddingVertical: 12,
-    borderRadius: 24,
+    borderRadius: 6,
   },
   orderBtnText: {
     color: '#fff',
@@ -495,13 +684,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
+  priceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
   price: {
-    fontSize: 32,
-    fontWeight: 'bold',
+    fontSize: 30,
+    fontWeight: '700',
     color: '#FF6B35',
     marginBottom: 0,
-    marginTop: 0,
-    letterSpacing: 0.5,
+    marginTop: 8,
+    letterSpacing: 0.2,
     textAlign: 'left',
   },
   reviewsSection: {
@@ -514,11 +709,25 @@ const styles = StyleSheet.create({
     padding: 15,
     marginBottom: 10,
   },
+  reviewContentRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  reviewContentLeft: {
+    flex: 1,
+    flexDirection: 'column',
+  },
   reviewHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 5,
+  },
+  reviewHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   reviewUser: {
     fontWeight: 'bold',
@@ -531,16 +740,139 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
   },
-  reviewImage: {
-    width: '100%',
-    height: 200,
-    borderRadius: 8,
-    marginBottom: 10,
-  },
   noReviewsText: {
     textAlign: 'center',
     color: '#888',
     marginVertical: 20,
+  },
+  header: {
+    backgroundColor: '#fff',
+    paddingTop: 0,
+    paddingBottom: 0,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    height: 48,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    height: '100%',
+    paddingHorizontal: 16,
+  },
+  headerIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 'auto',
+  },
+  headerBackArrow: {
+    marginRight: 12,
+  },
+  headerSearchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: '100%',
+    backgroundColor: '#fff',
+    borderColor: '#FF6B35',
+    borderWidth: 2,
+    borderRadius: 7,
+    paddingHorizontal: 12,
+    height: 32,
+    marginLeft: 0,
+    marginRight: 8,
+    flex: 1,
+    minWidth: 0,
+    maxWidth: 260,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  headerSearchIcon: {
+    marginRight: 8,
+    alignSelf: 'center',
+  },
+  headerSearchInput: {
+    flex: 1,
+    fontSize: 18,
+    paddingVertical: 0,
+    marginTop: 0,
+    marginBottom: 0,
+    color: '#333',
+    minWidth: 0,
+  },
+  animatedPlaceholderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    position: 'relative',
+    height: 32,
+    overflow: 'hidden',
+  },
+  animatedPlaceholder: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    color: '#888',
+    fontSize: 18,
+    paddingLeft: 0,
+    paddingRight: 0,
+    textAlignVertical: 'center',
+  },
+  pillBtnContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tickIcon: {
+    marginLeft: 8,
+  },
+  reviewImageSmall: {
+    width: 64,
+    height: 64,
+    borderRadius: 12,
+    marginTop: 4,
+    marginBottom: 6,
+    alignSelf: 'flex-start',
+  },
+  reviewImageCommentRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    marginTop: 2,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalImageContainer: {
+    width: '90%',
+    height: '60%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  modalImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 12,
+  },
+  modalCloseBtn: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 20,
+    padding: 4,
+  },
+  reviewAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    marginRight: 8,
+    backgroundColor: '#eee',
   },
 });
 

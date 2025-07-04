@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button, View, StyleSheet, ActivityIndicator, Text, TouchableOpacity, SafeAreaView, Image, Alert, LogBox } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
+import CartDetails from './src/screens/CartDetails';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -76,15 +77,53 @@ function ProfileScreen({ username, email, profilePicture, bio, onLogout, navigat
   );
 }
 
+// Add placeholder MyOrdersScreen if not already defined
+const MyOrdersScreen = () => (
+  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+    <Text>My Orders Screen</Text>
+  </View>
+);
+
+// Add placeholder component for Chat if not already defined
+const ChatScreen = () => (
+  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+    <Text>Chat Screen</Text>
+  </View>
+);
+
 function MainTabs({ username, email, profilePicture, bio, onLogout, navigation, onRefreshProfile }) {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarIcon: ({ color, size }) => {
+        tabBarIcon: ({ color, size, focused }) => {
           let iconName;
           if (route.name === 'Home') iconName = 'home-outline';
           else if (route.name === 'Profile') iconName = 'person-outline';
+          else if (route.name === 'Cart') iconName = 'cart-outline';
+          else if (route.name === 'MyOrders') iconName = 'bag-outline';
+          else if (route.name === 'Chat') iconName = 'chatbubble-ellipses-outline';
+          // Custom profile icon with user image
+          if (route.name === 'Profile' && profilePicture) {
+            return (
+              <View style={{
+                width: size,
+                height: size,
+                borderRadius: size / 2,
+                overflow: 'hidden',
+                borderWidth: focused ? 2 : 1,
+                borderColor: focused ? '#FF6B35' : '#ccc',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}>
+                <Image
+                  source={{ uri: profilePicture }}
+                  style={{ width: size, height: size, borderRadius: size / 2 }}
+                  resizeMode="cover"
+                />
+              </View>
+            );
+          }
           return <Ionicons name={iconName} size={size} color={color} />;
         },
       })}
@@ -92,6 +131,9 @@ function MainTabs({ username, email, profilePicture, bio, onLogout, navigation, 
       <Tab.Screen name="Home">
         {props => <DashboardScreen {...props} username={username} />}
       </Tab.Screen>
+      <Tab.Screen name="MyOrders" component={MyOrdersScreen} options={{ title: 'My Orders' }} />
+      <Tab.Screen name="Cart" component={CartDetails} />
+      <Tab.Screen name="Chat" component={ChatScreen} />
       <Tab.Screen name="Profile">
         {props => <ProfileScreen {...props} username={username} email={email} profilePicture={profilePicture} bio={bio} onLogout={(nav) => onLogout(nav || props.navigation)} navigation={props.navigation} onRefreshProfile={onRefreshProfile} />}
       </Tab.Screen>
@@ -119,7 +161,7 @@ export default function App() {
       // Add a timeout to prevent hanging
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 7000); // 7 seconds
-      const res = await fetch('http://192.168.254.5:8000/api/profile/me/', {
+      const res = await fetch('http://192.168.1.148:8000/api/profile/me/', {
         headers: { 'Authorization': `Bearer ${token}` },
         signal: controller.signal,
       });
@@ -271,6 +313,7 @@ export default function App() {
             <Stack.Screen name="EditProfile">
               {props => <EditProfileScreen {...props} onProfileUpdate={fetchAndStoreProfileDetails} />}
             </Stack.Screen>
+            <Stack.Screen name="CartDetails" component={CartDetails} />
           </>
         )}
       </Stack.Navigator>

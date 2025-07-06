@@ -6,7 +6,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { reviewsApi } from '../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import OrderConfirmationScreen from './OrderConfirmationScreen';
 
 const { width } = Dimensions.get('window');
 
@@ -26,8 +25,8 @@ const FoodDetailScreen = () => {
   // State for review image modal
   const [modalVisible, setModalVisible] = useState(false);
   const [modalImage, setModalImage] = useState(null);
-  // Modal state for order confirmation
-  const [orderModalVisible, setOrderModalVisible] = useState(false);
+  // State for quantity
+  const [quantity, setQuantity] = useState(1);
 
   // Dynamic placeholder cycling through food names
   const foodNames = [
@@ -101,31 +100,76 @@ const FoodDetailScreen = () => {
     }
   };
 
-  const handleOrderNow = () => {
-    setOrderModalVisible(true);
-  };
+
 
   const handleAddToCart = async () => {
     try {
       const accessToken = await AsyncStorage.getItem('accessToken');
-      const response = await fetch('http://192.168.1.148:8000/api/cart/', {
+      
+      if (!accessToken) {
+        Alert.alert('Login Required', 'Please log in to add items to your cart.');
+        return;
+      }
+
+      const requestBody = {
+        food_item_id: item.id,
+        quantity: quantity,
+        size_string: selectedSize,  // Backend expects 'size_string' (the size name as string)
+        spice_level: selectedSpice,  // Backend expects 'spice_level' (the spice level as string)
+      };
+      
+      console.log('Cart API request body:', requestBody);
+      console.log('Cart API endpoint:', 'http://192.168.1.90:8000/api/cart/');
+      console.log('Access token:', accessToken ? 'Present' : 'Missing');
+      console.log('Item ID:', item.id);
+      console.log('Item name:', item.name);
+      console.log('Selected size:', selectedSize);
+      console.log('Quantity:', quantity);
+      
+      const response = await fetch('http://192.168.1.90:8000/api/cart/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+          'Authorization': `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({
-          food_item_id: item.id,
-          quantity: quantity,
-          size: selectedSize,
-          spice_level: selectedSpice,
-        }),
+        body: JSON.stringify(requestBody),
       });
-      if (!response.ok) throw new Error('Failed to add to cart');
-      const cartData = await response.json();
-      Alert.alert('Added to Cart', `Added ${quantity} x ${item.name} (${selectedSize}, ${selectedSpice}) to cart.`);
+
+      if (!response.ok) {
+        const responseText = await response.text();
+        console.error('Cart API response status:', response.status);
+        console.error('Cart API response text:', responseText);
+        
+        try {
+          const errorData = JSON.parse(responseText);
+          throw new Error(errorData.message || `Server error: ${response.status}`);
+        } catch (parseError) {
+          throw new Error(`Server error: ${response.status} - ${responseText.substring(0, 100)}`);
+        }
+      }
+
+      const responseText = await response.text();
+      console.log('Cart API success response:', responseText);
+      
+      let cartData;
+      try {
+        cartData = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('Failed to parse success response:', parseError);
+        cartData = { message: 'Item added to cart successfully' };
+      }
+      
+      Alert.alert(
+        'Added to Cart', 
+        `Added ${quantity} x ${item.name} (${selectedSize}) to cart.`,
+        [
+          { text: 'Continue Shopping', style: 'default' },
+          { text: 'View Cart', onPress: () => navigation.navigate('Cart', { refresh: true }) }
+        ]
+      );
     } catch (error) {
-      Alert.alert('Error', 'Could not add to cart. Please try again.');
+      console.error('Add to cart error:', error);
+      Alert.alert('Error', error.message || 'Could not add to cart. Please try again.');
     }
   };
 
@@ -192,7 +236,7 @@ const FoodDetailScreen = () => {
       }
 
       // Use fetch for FormData
-      const response = await fetch('http://192.168.1.148:8000/api/reviews/', {
+      const response = await fetch('http://192.168.1.90:8000/api/reviews/', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -373,6 +417,27 @@ const FoodDetailScreen = () => {
           {/* Divider */}
           <View style={styles.divider} />
 
+          {/* Quantity selector */}
+          <Text style={styles.sectionTitle}>Quantity</Text>
+          <View style={styles.quantityContainer}>
+            <TouchableOpacity 
+              style={styles.quantityBtn} 
+              onPress={() => setQuantity(Math.max(1, quantity - 1))}
+            >
+              <Ionicons name="remove" size={20} color="#FF6B35" />
+            </TouchableOpacity>
+            <Text style={styles.quantityText}>{quantity}</Text>
+            <TouchableOpacity 
+              style={styles.quantityBtn} 
+              onPress={() => setQuantity(quantity + 1)}
+            >
+              <Ionicons name="add" size={20} color="#FF6B35" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Divider */}
+          <View style={styles.divider} />
+
           {/* Reviews Section */}
           <Text style={styles.sectionTitle}>Reviews</Text>
           {reviewsLoading ? (
@@ -403,9 +468,9 @@ const FoodDetailScreen = () => {
                         <View style={styles.reviewImageCommentRow}>
                           <Text style={[styles.reviewComment, { flex: 1 }]}>{review.comment}</Text>
                           {review.image && typeof review.image === 'string' && review.image.length > 0 && (
-                            <TouchableOpacity onPress={() => handleReviewImagePress(review.image.startsWith('http') ? review.image : `http://192.168.1.148:8000${review.image}`)}>
+                            <TouchableOpacity onPress={() => handleReviewImagePress(review.image.startsWith('http') ? review.image : `http://192.168.1.90:8000${review.image}`)}>
                               <Image
-                                source={{ uri: review.image.startsWith('http') ? review.image : `http://192.168.1.148:8000${review.image}` }}
+                                source={{ uri: review.image.startsWith('http') ? review.image : `http://192.168.1.90:8000${review.image}` }}
                                 style={styles.reviewImageSmall}
                               />
                             </TouchableOpacity>
@@ -462,14 +527,12 @@ const FoodDetailScreen = () => {
           </View>
         </View>
       </ScrollView>
-      {/* Order/Cart buttons at bottom */}
+      {/* Cart button at bottom */}
       <View style={styles.bottomBar}>
+        <View style={styles.bottomBarSpacer} />
         <TouchableOpacity style={styles.cartBtn} onPress={handleAddToCart}>
           <Ionicons name="cart-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
           <Text style={styles.cartBtnText}>Add to Cart</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.orderBtn} onPress={handleOrderNow}>
-          <Text style={styles.orderBtnText}>Order Now</Text>
         </TouchableOpacity>
       </View>
       {/* Modal for large review image */}
@@ -490,41 +553,7 @@ const FoodDetailScreen = () => {
           </View>
         </TouchableWithoutFeedback>
       </Modal>
-      {/* Order Confirmation Bottom Sheet Modal */}
-      <Modal
-        visible={orderModalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setOrderModalVisible(false)}
-      >
-        <TouchableWithoutFeedback onPress={() => setOrderModalVisible(false)}>
-          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'flex-end' }}>
-            <TouchableWithoutFeedback>
-              <Animated.View style={{
-                backgroundColor: '#fff',
-                borderTopLeftRadius: 24,
-                borderTopRightRadius: 24,
-                paddingBottom: 24,
-                paddingTop: 8,
-                minHeight: 420,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: -2 },
-                shadowOpacity: 0.1,
-                shadowRadius: 8,
-                elevation: 8,
-              }}>
-                <OrderConfirmationScreen
-                  item={item}
-                  selectedSize={selectedSize}
-                  selectedSpice={selectedSpice}
-                  onClose={() => setOrderModalVisible(false)}
-                  isModal
-                />
-              </Animated.View>
-            </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
-      </Modal>
+
     </SafeAreaView>
   );
 };
@@ -625,6 +654,30 @@ const styles = StyleSheet.create({
   pillTextActive: {
     color: '#fff',
   },
+  quantityContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 10,
+  },
+  quantityBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f5f5f5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  quantityText: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginHorizontal: 20,
+    color: '#333',
+    minWidth: 30,
+    textAlign: 'center',
+  },
   bottomBar: {
     position: 'absolute',
     left: 0,
@@ -634,17 +687,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#eee',
-    padding: 16,
+    padding: 12,
     justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 12,
+  },
+  bottomBarSpacer: {
+    flex: 1,
   },
   cartBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FF6B35',
-    paddingHorizontal: 18,
-    paddingVertical: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: 6,
     gap: 8,
   },
@@ -653,17 +708,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
-  orderBtn: {
-    backgroundColor: '#FFD600',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 6,
-  },
-  orderBtnText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
+
   reviewForm: {
     marginTop: 10,
   },

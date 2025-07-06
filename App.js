@@ -15,6 +15,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import CartDetails from './src/screens/CartDetails';
 import OrderConfirmationScreen from './src/screens/OrderConfirmationScreen';
+import OrderHistoryScreen from './src/screens/OrderHistoryScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -132,7 +133,7 @@ function MainTabs({ username, email, profilePicture, bio, onLogout, navigation, 
       <Tab.Screen name="Home">
         {props => <DashboardScreen {...props} username={username} />}
       </Tab.Screen>
-      <Tab.Screen name="MyOrders" component={MyOrdersScreen} options={{ title: 'My Orders' }} />
+      <Tab.Screen name="MyOrders" component={OrderHistoryScreen} options={{ title: 'My Orders' }} />
       <Tab.Screen name="Cart" component={CartDetails} />
       <Tab.Screen name="Chat" component={ChatScreen} />
       <Tab.Screen name="Profile">
@@ -162,7 +163,7 @@ export default function App() {
       // Add a timeout to prevent hanging
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 7000); // 7 seconds
-      const res = await fetch('http://192.168.1.148:8000/api/profile/me/', {
+              const res = await fetch('http://192.168.1.90:8000/api/profile/me/', {
         headers: { 'Authorization': `Bearer ${token}` },
         signal: controller.signal,
       });

@@ -14,6 +14,7 @@ import { Button, View, StyleSheet, ActivityIndicator, Text, TouchableOpacity, Sa
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import CartDetails from './src/screens/CartDetails';
+import OrderConfirmationScreen from './src/screens/OrderConfirmationScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -314,6 +315,7 @@ export default function App() {
               {props => <EditProfileScreen {...props} onProfileUpdate={fetchAndStoreProfileDetails} />}
             </Stack.Screen>
             <Stack.Screen name="CartDetails" component={CartDetails} />
+            <Stack.Screen name="OrderConfirmation" component={OrderConfirmationScreen} />
           </>
         )}
       </Stack.Navigator>

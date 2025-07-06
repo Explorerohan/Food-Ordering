@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { reviewsApi } from '../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import OrderConfirmationScreen from './OrderConfirmationScreen';
 
 const { width } = Dimensions.get('window');
 
@@ -25,6 +26,8 @@ const FoodDetailScreen = () => {
   // State for review image modal
   const [modalVisible, setModalVisible] = useState(false);
   const [modalImage, setModalImage] = useState(null);
+  // Modal state for order confirmation
+  const [orderModalVisible, setOrderModalVisible] = useState(false);
 
   // Dynamic placeholder cycling through food names
   const foodNames = [
@@ -99,8 +102,7 @@ const FoodDetailScreen = () => {
   };
 
   const handleOrderNow = () => {
-    const totalPrice = (selectedSizeObj?.price || 0) * quantity;
-    Alert.alert('Order Placed', `You have ordered ${quantity} x ${item.name} (${selectedSize}, ${selectedSpice}) for ₹${totalPrice}`);
+    setOrderModalVisible(true);
   };
 
   const handleAddToCart = async () => {
@@ -485,6 +487,41 @@ const FoodDetailScreen = () => {
                 <Ionicons name="close" size={32} color="#fff" />
               </TouchableOpacity>
             </View>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+      {/* Order Confirmation Bottom Sheet Modal */}
+      <Modal
+        visible={orderModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setOrderModalVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setOrderModalVisible(false)}>
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'flex-end' }}>
+            <TouchableWithoutFeedback>
+              <Animated.View style={{
+                backgroundColor: '#fff',
+                borderTopLeftRadius: 24,
+                borderTopRightRadius: 24,
+                paddingBottom: 24,
+                paddingTop: 8,
+                minHeight: 420,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: -2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 8,
+                elevation: 8,
+              }}>
+                <OrderConfirmationScreen
+                  item={item}
+                  selectedSize={selectedSize}
+                  selectedSpice={selectedSpice}
+                  onClose={() => setOrderModalVisible(false)}
+                  isModal
+                />
+              </Animated.View>
+            </TouchableWithoutFeedback>
           </View>
         </TouchableWithoutFeedback>
       </Modal>

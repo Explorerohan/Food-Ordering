@@ -9,7 +9,7 @@ import { profileApi } from '../services/api';
 const API_URL = 'http://192.168.1.148:8000/api/profile/';
 
 const EditProfileScreen = ({ navigation, onProfileUpdate }) => {
-  const [username, setUsername] = useState('');
+  const [username, setUsername] = useState(''); 
   const [email, setEmail] = useState('');
   const [bio, setBio] = useState('');
   const [profileImage, setProfileImage] = useState(null);

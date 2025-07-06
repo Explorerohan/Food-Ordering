@@ -1,4 +1,5 @@
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Base API configuration
 const API_BASE_URL = 'http://192.168.1.148:8000';
@@ -51,34 +52,35 @@ export const foodApi = {
 export const reviewsApi = {
   getReviewsByFoodId: async (foodId) => {
     try {
-      const response = await api.get(`/api/reviews/?food_item=${foodId}`);
-      return response.data;
+      return await apiCallWithAutoRefresh(async (accessToken) => {
+        const response = await api.get(`/api/reviews/?food_item=${foodId}`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        return response.data;
+      });
     } catch (error) {
       console.error('Error fetching reviews:', error.response ? error.response.data : error.message);
       throw error;
     }
   },
-  postReview: async (reviewData, accessToken) => {
+  postReview: async (reviewData) => {
     try {
-      const headers = {};
-      if (accessToken) {
-        headers['Authorization'] = `Bearer ${accessToken}`;
-      }
-      // Use axios.post directly for FormData to avoid base config issues
-      const response = await axios.post(
-        API_BASE_URL + '/api/reviews/',
-        reviewData,
-        { headers }
-      );
-      return response.data;
+      return await apiCallWithAutoRefresh(async (accessToken) => {
+        const headers = { Authorization: `Bearer ${accessToken}` };
+        // Use axios.post directly for FormData to avoid base config issues
+        const response = await axios.post(
+          API_BASE_URL + '/api/reviews/',
+          reviewData,
+          { headers }
+        );
+        return response.data;
+      });
     } catch (error) {
       console.error('Error posting review:', error.response ? error.response.data : error.message);
       throw error;
     }
   },
 };
-
-
 
 // Add authentication API
 export const authApi = {
@@ -113,48 +115,82 @@ export const authApi = {
 
 // Profile API service
 export const profileApi = {
-  getProfile: async (accessToken) => {
+  getProfile: async () => {
     try {
-      const response = await api.get('/api/profile/me/', {
-        headers: { Authorization: `Bearer ${accessToken}` },
+      return await apiCallWithAutoRefresh(async (accessToken) => {
+        const response = await api.get('/api/profile/me/', {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        return response.data;
       });
-      return response.data;
     } catch (error) {
       console.error('Error fetching profile:', error.response ? error.response.data : error.message);
       throw error;
     }
   },
-  updateProfile: async ({ username, email, bio, profileImage }, accessToken) => {
+  updateProfile: async ({ username, email, bio, profileImage }) => {
     try {
-      console.log('API: Updating profile with data:', { username, email, bio });
-      console.log('API: Token present:', !!accessToken);
-      const formData = new FormData();
-      formData.append('bio', bio);
-      formData.append('user[username]', username);
-      formData.append('user[email]', email);
-      if (profileImage && profileImage.startsWith('file')) {
-        formData.append('profile_picture', {
-          uri: profileImage,
-          name: 'profile.jpg',
-          type: 'image/jpeg',
-        });
-      }
-      const response = await axios.patch(
-        api.defaults.baseURL + '/api/profile/me/',
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'multipart/form-data',
-          },
+      return await apiCallWithAutoRefresh(async (accessToken) => {
+        console.log('API: Updating profile with data:', { username, email, bio });
+        const formData = new FormData();
+        formData.append('bio', bio);
+        formData.append('user[username]', username);
+        formData.append('user[email]', email);
+        if (profileImage && profileImage.startsWith('file')) {
+          formData.append('profile_picture', {
+            uri: profileImage,
+            name: 'profile.jpg',
+            type: 'image/jpeg',
+          });
         }
-      );
-      return response.data;
+        const response = await axios.patch(
+          api.defaults.baseURL + '/api/profile/me/',
+          formData,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              'Content-Type': 'multipart/form-data',
+            },
+          }
+        );
+        return response.data;
+      });
     } catch (error) {
       console.error('Error updating profile:', error.response ? error.response.data : error.message);
       throw error;
     }
   },
+};
+
+// Helper: refresh access token using refresh token
+export const refreshAccessToken = async () => {
+  const refreshToken = await AsyncStorage.getItem('refreshToken');
+  if (!refreshToken) throw new Error('No refresh token found');
+  const response = await axios.post(`${API_BASE_URL}/api/token/refresh/`, { refresh: refreshToken });
+  const newAccessToken = response.data.access;
+  await AsyncStorage.setItem('accessToken', newAccessToken);
+  return newAccessToken;
+};
+
+// Helper: wrap API call with auto-refresh logic
+export const apiCallWithAutoRefresh = async (apiFunc) => {
+  let accessToken = await AsyncStorage.getItem('accessToken');
+  try {
+    return await apiFunc(accessToken);
+  } catch (err) {
+    // If error is due to expired token, try to refresh
+    if (err.response && err.response.status === 401) {
+      try {
+        accessToken = await refreshAccessToken();
+        return await apiFunc(accessToken);
+      } catch (refreshErr) {
+        // If refresh fails, log out user (clear tokens)
+        await AsyncStorage.multiRemove(['accessToken', 'refreshToken']);
+        throw new Error('Session expired. Please log in again.');
+      }
+    }
+    throw err;
+  }
 };
 
 export default api; 

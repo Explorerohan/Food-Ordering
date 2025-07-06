@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView as SafeAreaViewContext } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 
 import FoodItemCard from '../components/FoodItemCard';
 import CategoryFilter from '../components/CategoryFilter';
@@ -122,7 +123,7 @@ const DashboardScreen = ({ username }) => {
   const handleAddToCart = async (item) => {
     try {
       const accessToken = await AsyncStorage.getItem('accessToken');
-      const response = await fetch('http://192.168.1.90:8000/api/cart/', {
+      const response = await fetch('http://192.168.254.5:8000/api/cart/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -182,7 +183,7 @@ const DashboardScreen = ({ username }) => {
   if (loading) {
     return (
       <SafeAreaViewContext style={styles.loadingContainer}>
-        <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+        <StatusBar barStyle="dark-content" />
         <ActivityIndicator size="large" color="#FF6B35" />
         <Text style={styles.loadingText}>Loading delicious food...</Text>
       </SafeAreaViewContext>
@@ -191,7 +192,7 @@ const DashboardScreen = ({ username }) => {
 
   return (
     <SafeAreaViewContext style={styles.container} edges={["top","left","right"]}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <StatusBar barStyle="dark-content" />
       {renderHeader()}
       <FlatList
         ListHeaderComponent={
@@ -222,7 +223,7 @@ const DashboardScreen = ({ username }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#fff',
   },
   loadingContainer: {
     flex: 1,
@@ -237,7 +238,7 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#fff',
-    paddingTop: 16,
+    paddingTop: 4,
     paddingBottom: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',

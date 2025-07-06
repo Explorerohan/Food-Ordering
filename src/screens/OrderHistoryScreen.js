@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView as SafeAreaViewContext } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
+import { StatusBar } from 'expo-status-bar';
 
 const OrderHistoryScreen = ({ navigation }) => {
   const [orders, setOrders] = useState([]);
@@ -13,7 +14,7 @@ const OrderHistoryScreen = ({ navigation }) => {
     try {
       setLoading(true);
       const accessToken = await AsyncStorage.getItem('accessToken');
-      const response = await fetch('http://192.168.1.90:8000/api/orders/', {
+      const response = await fetch('http://192.168.254.5:8000/api/orders/', {
         headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {},
       });
       
@@ -86,6 +87,8 @@ const OrderHistoryScreen = ({ navigation }) => {
         return '#2196F3';
       case 'cancelled':
         return '#F44336';
+      case 'completed':
+        return '#4CAF50';
       default:
         return '#666';
     }
@@ -94,10 +97,14 @@ const OrderHistoryScreen = ({ navigation }) => {
   const renderHeader = () => (
     <View style={styles.header}>
       <View style={styles.headerContentRow}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backArrow}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.backArrow, {marginLeft: -12, marginRight: 2}]}> 
           <Ionicons name="arrow-back" size={28} color="#222" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Order History</Text>
+        <View style={{ flex: 1 }} />
+        <TouchableOpacity onPress={fetchOrders} style={{ padding: 4 }}>
+          <Ionicons name="refresh" size={24} color="#222" />
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -113,6 +120,7 @@ const OrderHistoryScreen = ({ navigation }) => {
 
   return (
     <SafeAreaViewContext style={{ flex: 1, backgroundColor: '#fff' }} edges={["top","left","right"]}>
+      <StatusBar style="dark" />
       {renderHeader()}
       <View style={styles.contentContainer}>
         {orders.length === 0 ? (
@@ -139,6 +147,8 @@ const styles = StyleSheet.create({
   contentContainer: { 
     padding: 16,
     flex: 1,
+    paddingTop: 0,
+    marginTop: 0,
   },
   centered: { 
     flex: 1, 
@@ -174,6 +184,7 @@ const styles = StyleSheet.create({
   },
   ordersList: {
     paddingBottom: 20,
+    marginTop: 8,
   },
   orderCard: {
     backgroundColor: '#fff',

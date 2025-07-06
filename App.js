@@ -25,7 +25,6 @@ LogBox.ignoreLogs([
 ]);
 
 function ProfileScreen({ username, email, profilePicture, bio, onLogout, navigation, onRefreshProfile }) {
-  // Refresh profile data when screen is focused
   useFocusEffect(
     React.useCallback(() => {
       const refreshProfile = async () => {
@@ -38,44 +37,48 @@ function ProfileScreen({ username, email, profilePicture, bio, onLogout, navigat
     }, [onRefreshProfile])
   );
   return (
-    <SafeAreaView style={styles.profileContainer}>
-      <TouchableOpacity style={styles.backArrow} onPress={() => navigation.goBack()}>
-        <Ionicons name="arrow-back" size={28} color="#333" />
+    <View style={{ flex: 1, backgroundColor: '#fff' }}>
+      {/* StatusBar for ProfileScreen */}
+      <StatusBar style="light" />
+      {/* Header Section */}
+      <View style={{ backgroundColor: '#FF9800', paddingBottom: 24, paddingTop: 40 + (StatusBar.currentHeight || 0), paddingHorizontal: 20, borderBottomLeftRadius: 18, borderBottomRightRadius: 18, elevation: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowOffset: { width: 0, height: 2 }, shadowRadius: 4 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 24 }}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 2, padding: 4, marginLeft: -12 }}>
+            <Ionicons name="arrow-back" size={28} color="#fff" />
       </TouchableOpacity>
-      <View style={styles.profileHeader}>
+          <Text style={{ color: '#fff', fontSize: 26, fontWeight: 'bold', letterSpacing: 0.2 }}>
+            My Profile
+          </Text>
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         {profilePicture ? (
-          <Image source={{ uri: profilePicture }} style={styles.profileAvatar} />
+            <Image source={{ uri: profilePicture }} style={{ width: 84, height: 84, borderRadius: 42, borderWidth: 2, borderColor: '#fff', marginRight: 18, backgroundColor: '#fff' }} />
         ) : (
-          <Ionicons name="person-circle-outline" size={120} color="#333" />
+            <Ionicons name="person-circle-outline" size={84} color="#fff" style={{ marginRight: 18 }} />
         )}
-        <Text style={styles.profileUsername}>{username}</Text>
-        <Text style={styles.profileEmail}>{email}</Text>
-        {bio ? <Text style={styles.profileBio}>{bio}</Text> : null}
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold', letterSpacing: 0.1 }}>{username}</Text>
+            {email ? (
+              <Text style={{ color: '#ffe0b2', fontSize: 14, marginTop: 2 }} numberOfLines={1}>{email}</Text>
+            ) : null}
+            {bio ? (
+              <Text style={{ color: '#ffe0b2', fontSize: 13, marginTop: 2 }} numberOfLines={2}>{bio}</Text>
+            ) : null}
+          </View>
+          <TouchableOpacity onPress={() => navigation.navigate('EditProfile')} style={{ marginLeft: 8, padding: 6, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.15)' }}>
+            <Ionicons name="pencil" size={22} color="#fff" />
+          </TouchableOpacity>
+        </View>
       </View>
-
-      <View style={styles.menuContainer}>
-        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('EditProfile')}>
-          <Ionicons name="create-outline" size={24} color="#555" />
-          <Text style={styles.menuItemText}>Edit Profile</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.menuItem}>
-          <Ionicons name="receipt-outline" size={24} color="#555" />
-          <Text style={styles.menuItemText}>My Orders</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.menuItem}>
-          <Ionicons name="settings-outline" size={24} color="#555" />
-          <Text style={styles.menuItemText}>Settings</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.menuItem}>
-          <Ionicons name="help-circle-outline" size={24} color="#555" />
-          <Text style={styles.menuItemText}>Help & Support</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.menuItem} onPress={() => onLogout(navigation)}>
-          <Ionicons name="log-out-outline" size={24} color="#FF6B35" />
-          <Text style={[styles.menuItemText, { color: '#FF6B35', fontWeight: 'bold' }]}>Logout</Text>
-        </TouchableOpacity>
+      {/* Menu section */}
+      <View style={{ backgroundColor: '#fff', flex: 1, marginTop: 8, borderTopLeftRadius: 18, borderTopRightRadius: 18, overflow: 'hidden' }}>
+        <MenuItem icon="card-outline" label="Payment Method" onPress={() => {}} />
+        <MenuItem icon="gift-outline" label="My Promocodes" onPress={() => {}} />
+        <MenuItem icon="heart-outline" label="My Orders" onPress={() => navigation.navigate('MyOrders')} />
+        <MenuItem icon="map-outline" label="Track your order" onPress={() => {}} />
+        <MenuItem icon="log-out-outline" label="Sign Out" onPress={() => onLogout(navigation)} color="#FF6B35" />
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -143,6 +146,17 @@ function MainTabs({ username, email, profilePicture, bio, onLogout, navigation, 
   );
 }
 
+// Add MenuItem component below ProfileScreen
+function MenuItem({ icon, label, onPress, color }) {
+  return (
+    <TouchableOpacity onPress={onPress} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 18, paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: '#f6f6f6', backgroundColor: '#fff' }}>
+      <Ionicons name={icon} size={24} color={color || '#555'} style={{ width: 28 }} />
+      <Text style={{ marginLeft: 18, fontSize: 16.5, color: color || '#222', flex: 1, fontWeight: '500', letterSpacing: 0.1 }}>{label}</Text>
+      <Ionicons name="chevron-forward" size={22} color="#bbb" />
+    </TouchableOpacity>
+  );
+}
+
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userId, setUserId] = useState(null);
@@ -163,7 +177,7 @@ export default function App() {
       // Add a timeout to prevent hanging
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 7000); // 7 seconds
-              const res = await fetch('http://192.168.1.90:8000/api/profile/me/', {
+              const res = await fetch('http://192.168.254.5:8000/api/profile/me/', {
         headers: { 'Authorization': `Bearer ${token}` },
         signal: controller.signal,
       });

@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView as SafeAreaViewContext } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
+import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 
 const CartDetails = ({ navigation, route }) => {
   const [cartItems, setCartItems] = useState([]);
@@ -36,7 +37,7 @@ const CartDetails = ({ navigation, route }) => {
       }
       
       const accessToken = await AsyncStorage.getItem('accessToken');
-      const response = await fetch('http://192.168.1.90:8000/api/cart/', {
+      const response = await fetch('http://192.168.254.5:8000/api/cart/', {
         headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {},
       });
       
@@ -102,7 +103,7 @@ const CartDetails = ({ navigation, route }) => {
               return;
             }
 
-            const response = await fetch('http://192.168.1.90:8000/api/cart/checkout/', {
+            const response = await fetch('http://192.168.254.5:8000/api/cart/checkout/', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -147,11 +148,10 @@ const CartDetails = ({ navigation, route }) => {
   const clearCart = async () => {
     try {
       const accessToken = await AsyncStorage.getItem('accessToken');
-      const response = await fetch('http://192.168.1.90:8000/api/cart/', {
+      const response = await fetch('http://192.168.254.5:8000/api/cart/clear/', {
         method: 'DELETE',
         headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {},
       });
-      
       if (!response.ok) {
         if (response.status === 401) {
           Alert.alert('Session Expired', 'Please log in again.');
@@ -159,7 +159,6 @@ const CartDetails = ({ navigation, route }) => {
         }
         throw new Error(`Failed to clear cart: ${response.status}`);
       }
-      
       setCartItems([]);
       setTotal(0);
       Alert.alert('Cart Cleared', 'Your cart has been cleared.');
@@ -167,6 +166,17 @@ const CartDetails = ({ navigation, route }) => {
       console.error('Error clearing cart:', error);
       Alert.alert('Error', 'Could not clear cart. Please try again.');
     }
+  };
+
+  const confirmClearCart = () => {
+    Alert.alert(
+      'Clear Cart',
+      'Are you sure you want to remove all items from your cart?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Clear', style: 'destructive', onPress: clearCart }
+      ]
+    );
   };
 
   const renderItem = ({ item }) => {
@@ -182,7 +192,7 @@ const CartDetails = ({ navigation, route }) => {
         <View style={styles.itemImageContainer}>
           {foodImage ? (
             <Image 
-              source={{ uri: foodImage.startsWith('http') ? foodImage : `http://192.168.1.90:8000${foodImage}` }} 
+              source={{ uri: foodImage.startsWith('http') ? foodImage : `http://192.168.254.5:8000${foodImage}` }} 
               style={styles.itemImage} 
             />
           ) : (
@@ -210,13 +220,13 @@ const CartDetails = ({ navigation, route }) => {
   const renderHeader = () => (
     <View style={styles.header}>
       <View style={styles.headerContentRow}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backArrow}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 2, padding: 4, marginLeft: -12 }}>
           <Ionicons name="arrow-back" size={28} color="#222" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Cart</Text>
         <View style={{ flex: 1 }} />
         <TouchableOpacity 
-          onPress={clearCart} 
+          onPress={confirmClearCart} 
           style={styles.clearCartBtn}
           disabled={cartItems.length === 0}
         >
@@ -241,6 +251,7 @@ const CartDetails = ({ navigation, route }) => {
 
   return (
     <SafeAreaViewContext style={{ flex: 1, backgroundColor: '#fff' }} edges={["top","left","right"]}>
+      <StatusBar style="dark" />
       {renderHeader()}
       <View style={styles.contentContainer}>
         {cartItems.length === 0 ? (
@@ -284,6 +295,8 @@ const styles = StyleSheet.create({
   contentContainer: { 
     padding: 16,
     flex: 1,
+    paddingTop: 0,
+    marginTop: 0,
   },
   centered: { 
     flex: 1, 
@@ -453,7 +466,7 @@ const styles = StyleSheet.create({
   header: {
     width: '100%',
     backgroundColor: '#fff',
-    paddingBottom: 12,
+    paddingBottom: 8,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',

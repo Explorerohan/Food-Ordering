@@ -14,7 +14,7 @@ const OrderHistoryScreen = ({ navigation }) => {
     try {
       setLoading(true);
       const accessToken = await AsyncStorage.getItem('accessToken');
-      const response = await fetch('http://192.168.254.5:8000/api/orders/', {
+      const response = await fetch('http://192.168.254.3:8000/api/orders/', {
         headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {},
       });
       

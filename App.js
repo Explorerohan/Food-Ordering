@@ -43,10 +43,10 @@ function ProfileScreen({ username, email, profilePicture, bio, onLogout, navigat
       {/* Header Section */}
       <View style={{ backgroundColor: '#FF9800', paddingBottom: 24, paddingTop: 40 + (StatusBar.currentHeight || 0), paddingHorizontal: 20, borderBottomLeftRadius: 18, borderBottomRightRadius: 18, elevation: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowOffset: { width: 0, height: 2 }, shadowRadius: 4 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 24 }}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 2, padding: 4, marginLeft: -12 }}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 2, marginLeft: -12 }}>
             <Ionicons name="arrow-back" size={28} color="#fff" />
       </TouchableOpacity>
-          <Text style={{ color: '#fff', fontSize: 26, fontWeight: 'bold', letterSpacing: 0.2 }}>
+          <Text style={{ color: '#fff', fontSize: 26, fontWeight: 'bold', letterSpacing: 0.2, marginLeft: 8 }}>
             My Profile
           </Text>
         </View>
@@ -177,7 +177,7 @@ export default function App() {
       // Add a timeout to prevent hanging
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 7000); // 7 seconds
-              const res = await fetch('http://192.168.254.5:8000/api/profile/me/', {
+              const res = await fetch('http://192.168.254.3:8000/api/profile/me/', {
         headers: { 'Authorization': `Bearer ${token}` },
         signal: controller.signal,
       });

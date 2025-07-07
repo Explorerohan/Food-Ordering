@@ -37,7 +37,7 @@ const CartDetails = ({ navigation, route }) => {
       }
       
       const accessToken = await AsyncStorage.getItem('accessToken');
-      const response = await fetch('http://192.168.254.5:8000/api/cart/', {
+      const response = await fetch('http://192.168.254.3:8000/api/cart/', {
         headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {},
       });
       
@@ -103,7 +103,7 @@ const CartDetails = ({ navigation, route }) => {
               return;
             }
 
-            const response = await fetch('http://192.168.254.5:8000/api/cart/checkout/', {
+            const response = await fetch('http://192.168.254.3:8000/api/cart/checkout/', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -148,7 +148,7 @@ const CartDetails = ({ navigation, route }) => {
   const clearCart = async () => {
     try {
       const accessToken = await AsyncStorage.getItem('accessToken');
-      const response = await fetch('http://192.168.254.5:8000/api/cart/clear/', {
+      const response = await fetch('http://192.168.254.3:8000/api/cart/clear/', {
         method: 'DELETE',
         headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {},
       });
@@ -192,7 +192,7 @@ const CartDetails = ({ navigation, route }) => {
         <View style={styles.itemImageContainer}>
           {foodImage ? (
             <Image 
-              source={{ uri: foodImage.startsWith('http') ? foodImage : `http://192.168.254.5:8000${foodImage}` }} 
+                              source={{ uri: foodImage.startsWith('http') ? foodImage : `http://192.168.254.3:8000${foodImage}` }} 
               style={styles.itemImage} 
             />
           ) : (
@@ -220,7 +220,7 @@ const CartDetails = ({ navigation, route }) => {
   const renderHeader = () => (
     <View style={styles.header}>
       <View style={styles.headerContentRow}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 2, padding: 4, marginLeft: -12 }}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.backArrow, {marginLeft: -12, marginRight: 2}]}>
           <Ionicons name="arrow-back" size={28} color="#222" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Cart</Text>

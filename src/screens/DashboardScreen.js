@@ -123,7 +123,7 @@ const DashboardScreen = ({ username }) => {
   const handleAddToCart = async (item) => {
     try {
       const accessToken = await AsyncStorage.getItem('accessToken');
-      const response = await fetch('http://192.168.254.5:8000/api/cart/', {
+      const response = await fetch('http://192.168.254.3:8000/api/cart/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

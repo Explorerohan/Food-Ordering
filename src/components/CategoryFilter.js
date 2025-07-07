@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
+  Image,
 } from 'react-native';
 
 const CategoryFilter = ({ categories, selectedCategory, onSelectCategory }) => {
@@ -17,22 +18,29 @@ const CategoryFilter = ({ categories, selectedCategory, onSelectCategory }) => {
         decelerationRate="fast"
         snapToAlignment="center"
       >
-        {categories.map((category) => (
+        {categories.map((categoryObj) => (
           <TouchableOpacity
-            key={category}
+            key={categoryObj.name}
             style={[
               styles.categoryButton,
-              selectedCategory === category && styles.selectedCategory,
+              selectedCategory === categoryObj.name && styles.selectedCategory,
             ]}
-            onPress={() => onSelectCategory(category)}
+            onPress={() => onSelectCategory(categoryObj.name)}
           >
+            {categoryObj.image && (
+              <Image
+                source={{ uri: categoryObj.image.startsWith('http') ? categoryObj.image : `http://192.168.1.90:8000${categoryObj.image}` }}
+                style={styles.categoryImage}
+                resizeMode="cover"
+              />
+            )}
             <Text
               style={[
                 styles.categoryText,
-                selectedCategory === category && styles.selectedCategoryText,
+                selectedCategory === categoryObj.name && styles.selectedCategoryText,
               ]}
             >
-              {category}
+              {categoryObj.name}
             </Text>
           </TouchableOpacity>
         ))}
@@ -55,20 +63,17 @@ const styles = StyleSheet.create({
     paddingLeft: 16, // Add left padding to align first category with food items
   },
   categoryButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    width: 80,
+    height: 90,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
     marginRight: 12,
-    borderRadius: 25,
-    backgroundColor: '#e0e0e0', // Darker, more visible oval background
-    borderWidth: 0, // Remove border for unselected
-    elevation: 0, // Remove shadow
-    shadowColor: 'transparent',
-    shadowOffset: {
-      width: 0,
-      height: 0,
-    },
-    shadowOpacity: 0,
-    shadowRadius: 0,
+    borderRadius: 12,
+    backgroundColor: '#e0e0e0',
+    borderWidth: 0,
+    elevation: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   selectedCategory: {
     backgroundColor: '#FF6B35',
@@ -82,6 +87,13 @@ const styles = StyleSheet.create({
   },
   selectedCategoryText: {
     color: '#fff',
+  },
+  categoryImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 8,
+    marginBottom: 6,
+    backgroundColor: '#fff',
   },
 });
 

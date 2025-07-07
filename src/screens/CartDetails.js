@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView as SafeAreaViewContext } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
+import { fetchWithAutoRefresh } from '../services/api';
 
 const CartDetails = ({ navigation, route }) => {
   const [cartItems, setCartItems] = useState([]);
@@ -36,19 +37,11 @@ const CartDetails = ({ navigation, route }) => {
         setLoading(true);
       }
       
-      const accessToken = await AsyncStorage.getItem('accessToken');
-      const response = await fetch('http://192.168.254.3:8000/api/cart/', {
-        headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {},
+      const response = await fetchWithAutoRefresh(async (accessToken) => {
+        return await fetch('http://192.168.1.90:8000/api/cart/', {
+          headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {},
+        });
       });
-      
-      if (!response.ok) {
-        if (response.status === 401) {
-          Alert.alert('Session Expired', 'Please log in again.');
-          // Navigate to login or clear tokens
-          return;
-        }
-        throw new Error(`Failed to fetch cart: ${response.status}`);
-      }
       
       const data = await response.json();
       console.log('Cart data received:', data);
@@ -97,21 +90,17 @@ const CartDetails = ({ navigation, route }) => {
         { text: 'Cancel', style: 'cancel' },
         { text: 'Proceed', onPress: async () => {
           try {
-            const accessToken = await AsyncStorage.getItem('accessToken');
-            if (!accessToken) {
-              Alert.alert('Login Required', 'Please log in to checkout.');
-              return;
-            }
-
-            const response = await fetch('http://192.168.254.3:8000/api/cart/checkout/', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${accessToken}`,
-              },
-              body: JSON.stringify({
-                description: `Order from ${new Date().toLocaleDateString()}`,
-              }),
+            const response = await fetchWithAutoRefresh(async (accessToken) => {
+              return await fetch('http://192.168.1.90:8000/api/cart/checkout/', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${accessToken}`,
+                },
+                body: JSON.stringify({
+                  description: `Order from ${new Date().toLocaleDateString()}`,
+                }),
+              });
             });
 
             if (!response.ok) {
@@ -147,18 +136,17 @@ const CartDetails = ({ navigation, route }) => {
 
   const clearCart = async () => {
     try {
-      const accessToken = await AsyncStorage.getItem('accessToken');
-      const response = await fetch('http://192.168.254.3:8000/api/cart/clear/', {
-        method: 'DELETE',
-        headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {},
+      const response = await fetchWithAutoRefresh(async (accessToken) => {
+        return await fetch('http://192.168.1.90:8000/api/cart/clear/', {
+          method: 'DELETE',
+          headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {},
+        });
       });
+      
       if (!response.ok) {
-        if (response.status === 401) {
-          Alert.alert('Session Expired', 'Please log in again.');
-          return;
-        }
         throw new Error(`Failed to clear cart: ${response.status}`);
       }
+      
       setCartItems([]);
       setTotal(0);
       Alert.alert('Cart Cleared', 'Your cart has been cleared.');
@@ -192,7 +180,7 @@ const CartDetails = ({ navigation, route }) => {
         <View style={styles.itemImageContainer}>
           {foodImage ? (
             <Image 
-                              source={{ uri: foodImage.startsWith('http') ? foodImage : `http://192.168.254.3:8000${foodImage}` }} 
+                              source={{ uri: foodImage.startsWith('http') ? foodImage : `http://192.168.1.90:8000${foodImage}` }} 
               style={styles.itemImage} 
             />
           ) : (

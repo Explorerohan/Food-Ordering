@@ -2,7 +2,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Base API configuration
-const API_BASE_URL = 'http://192.168.254.3:8000';
+const API_BASE_URL = 'http://192.168.1.90:8000';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -172,7 +172,7 @@ export const refreshAccessToken = async () => {
   return newAccessToken;
 };
 
-// Helper: wrap API call with auto-refresh logic
+// Helper: wrap API call with auto-refresh logic (for axios)
 export const apiCallWithAutoRefresh = async (apiFunc) => {
   let accessToken = await AsyncStorage.getItem('accessToken');
   try {
@@ -190,6 +190,50 @@ export const apiCallWithAutoRefresh = async (apiFunc) => {
       }
     }
     throw err;
+  }
+};
+
+// Helper: wrap fetch API call with auto-refresh logic
+export const fetchWithAutoRefresh = async (fetchFunc) => {
+  let accessToken = await AsyncStorage.getItem('accessToken');
+  try {
+    const response = await fetchFunc(accessToken);
+    if (response.status === 401) {
+      // Token expired, try to refresh
+      try {
+        accessToken = await refreshAccessToken();
+        const retryResponse = await fetchFunc(accessToken);
+        if (retryResponse.status === 401) {
+          // Still 401 after refresh, clear tokens
+          await AsyncStorage.multiRemove(['accessToken', 'refreshToken']);
+          throw new Error('Session expired. Please log in again.');
+        }
+        return retryResponse;
+      } catch (refreshErr) {
+        // If refresh fails, clear tokens
+        await AsyncStorage.multiRemove(['accessToken', 'refreshToken']);
+        throw new Error('Session expired. Please log in again.');
+      }
+    }
+    return response;
+  } catch (err) {
+    // If it's already our custom error, re-throw it
+    if (err.message === 'Session expired. Please log in again.') {
+      throw err;
+    }
+    // For other errors, try refresh once
+    try {
+      accessToken = await refreshAccessToken();
+      const retryResponse = await fetchFunc(accessToken);
+      if (retryResponse.status === 401) {
+        await AsyncStorage.multiRemove(['accessToken', 'refreshToken']);
+        throw new Error('Session expired. Please log in again.');
+      }
+      return retryResponse;
+    } catch (refreshErr) {
+      await AsyncStorage.multiRemove(['accessToken', 'refreshToken']);
+      throw new Error('Session expired. Please log in again.');
+    }
   }
 };
 

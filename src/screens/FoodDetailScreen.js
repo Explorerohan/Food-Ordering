@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { reviewsApi } from '../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { apiCallWithAutoRefresh } from '../services/api';
 
 const { width } = Dimensions.get('window');
 
@@ -100,17 +101,8 @@ const FoodDetailScreen = () => {
     }
   };
 
-
-
   const handleAddToCart = async () => {
     try {
-      const accessToken = await AsyncStorage.getItem('accessToken');
-      
-      if (!accessToken) {
-        Alert.alert('Login Required', 'Please log in to add items to your cart.');
-        return;
-      }
-
       const requestBody = {
         food_item_id: item.id,
         quantity: quantity,
@@ -119,45 +111,45 @@ const FoodDetailScreen = () => {
       };
       
       console.log('Cart API request body:', requestBody);
-      console.log('Cart API endpoint:', 'http://192.168.254.3:8000/api/cart/');
-      console.log('Access token:', accessToken ? 'Present' : 'Missing');
+      console.log('Cart API endpoint:', 'http://192.168.1.90:8000/api/cart/');
       console.log('Item ID:', item.id);
       console.log('Item name:', item.name);
       console.log('Selected size:', selectedSize);
       console.log('Quantity:', quantity);
       
-      const response = await fetch('http://192.168.254.3:8000/api/cart/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify(requestBody),
-      });
+      const cartData = await apiCallWithAutoRefresh(async (accessToken) => {
+        const response = await fetch('http://192.168.1.90:8000/api/cart/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify(requestBody),
+        });
 
-      if (!response.ok) {
+        if (!response.ok) {
+          const responseText = await response.text();
+          console.error('Cart API response status:', response.status);
+          console.error('Cart API response text:', responseText);
+          
+          try {
+            const errorData = JSON.parse(responseText);
+            throw new Error(errorData.message || `Server error: ${response.status}`);
+          } catch (parseError) {
+            throw new Error(`Server error: ${response.status} - ${responseText.substring(0, 100)}`);
+          }
+        }
+
         const responseText = await response.text();
-        console.error('Cart API response status:', response.status);
-        console.error('Cart API response text:', responseText);
+        console.log('Cart API success response:', responseText);
         
         try {
-          const errorData = JSON.parse(responseText);
-          throw new Error(errorData.message || `Server error: ${response.status}`);
+          return JSON.parse(responseText);
         } catch (parseError) {
-          throw new Error(`Server error: ${response.status} - ${responseText.substring(0, 100)}`);
+          console.error('Failed to parse success response:', parseError);
+          return { message: 'Item added to cart successfully' };
         }
-      }
-
-      const responseText = await response.text();
-      console.log('Cart API success response:', responseText);
-      
-      let cartData;
-      try {
-        cartData = JSON.parse(responseText);
-      } catch (parseError) {
-        console.error('Failed to parse success response:', parseError);
-        cartData = { message: 'Item added to cart successfully' };
-      }
+      });
       
       Alert.alert(
         'Added to Cart', 
@@ -236,7 +228,7 @@ const FoodDetailScreen = () => {
       }
 
       // Use fetch for FormData
-      const response = await fetch('http://192.168.254.3:8000/api/reviews/', {
+      const response = await fetch('http://192.168.1.90:8000/api/reviews/', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -417,27 +409,6 @@ const FoodDetailScreen = () => {
           {/* Divider */}
           <View style={styles.divider} />
 
-          {/* Quantity selector */}
-          <Text style={styles.sectionTitle}>Quantity</Text>
-          <View style={styles.quantityContainer}>
-            <TouchableOpacity 
-              style={styles.quantityBtn} 
-              onPress={() => setQuantity(Math.max(1, quantity - 1))}
-            >
-              <Ionicons name="remove" size={20} color="#FF6B35" />
-            </TouchableOpacity>
-            <Text style={styles.quantityText}>{quantity}</Text>
-            <TouchableOpacity 
-              style={styles.quantityBtn} 
-              onPress={() => setQuantity(quantity + 1)}
-            >
-              <Ionicons name="add" size={20} color="#FF6B35" />
-            </TouchableOpacity>
-          </View>
-
-          {/* Divider */}
-          <View style={styles.divider} />
-
           {/* Reviews Section */}
           <Text style={styles.sectionTitle}>Reviews</Text>
           {reviewsLoading ? (
@@ -468,9 +439,9 @@ const FoodDetailScreen = () => {
                         <View style={styles.reviewImageCommentRow}>
                           <Text style={[styles.reviewComment, { flex: 1 }]}>{review.comment}</Text>
                           {review.image && typeof review.image === 'string' && review.image.length > 0 && (
-                            <TouchableOpacity onPress={() => handleReviewImagePress(review.image.startsWith('http') ? review.image : `http://192.168.254.3:8000${review.image}`)}>
+                                                          <TouchableOpacity onPress={() => handleReviewImagePress(review.image.startsWith('http') ? review.image : `http://192.168.1.90:8000${review.image}`)}>
                               <Image
-                                source={{ uri: review.image.startsWith('http') ? review.image : `http://192.168.254.3:8000${review.image}` }}
+                                source={{ uri: review.image.startsWith('http') ? review.image : `http://192.168.1.90:8000${review.image}` }}
                                 style={styles.reviewImageSmall}
                               />
                             </TouchableOpacity>
@@ -530,10 +501,27 @@ const FoodDetailScreen = () => {
       {/* Cart button at bottom */}
       <View style={styles.bottomBar}>
         <View style={styles.bottomBarSpacer} />
-        <TouchableOpacity style={styles.cartBtn} onPress={handleAddToCart}>
-          <Ionicons name="cart-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
-          <Text style={styles.cartBtnText}>Add to Cart</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+          <View style={[styles.quantityContainer, styles.quantityBox]}> 
+            <TouchableOpacity 
+              style={styles.quantityBtn} 
+              onPress={() => setQuantity(Math.max(1, quantity - 1))}
+            >
+              <Ionicons name="remove" size={20} color="#FF6B35" />
+            </TouchableOpacity>
+            <Text style={styles.quantityText}>{quantity}</Text>
+            <TouchableOpacity 
+              style={styles.quantityBtn} 
+              onPress={() => setQuantity(quantity + 1)}
+            >
+              <Ionicons name="add" size={20} color="#FF6B35" />
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity style={styles.cartBtn} onPress={handleAddToCart}>
+            <Ionicons name="cart-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
+            <Text style={styles.cartBtnText}>Add to Cart</Text>
+          </TouchableOpacity>
+        </View>
       </View>
       {/* Modal for large review image */}
       <Modal
@@ -698,10 +686,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FF6B35',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 6,
+    paddingHorizontal: 24,
+    height: 48,
+    borderRadius: 12,
     gap: 8,
+    justifyContent: 'center',
+    minWidth: 140,
   },
   cartBtnText: {
     color: '#fff',
@@ -955,6 +945,19 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     marginRight: 8,
     backgroundColor: '#eee',
+  },
+  quantityBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f7f7f7',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#eee',
+    paddingHorizontal: 10,
+    height: 48,
+    marginRight: 16,
+    minWidth: 110,
+    justifyContent: 'center',
   },
 });
 

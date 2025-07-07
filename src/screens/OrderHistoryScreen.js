@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView as SafeAreaViewContext } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
+import { fetchWithAutoRefresh } from '../services/api';
 
 const OrderHistoryScreen = ({ navigation }) => {
   const [orders, setOrders] = useState([]);
@@ -13,16 +14,13 @@ const OrderHistoryScreen = ({ navigation }) => {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const accessToken = await AsyncStorage.getItem('accessToken');
-      const response = await fetch('http://192.168.254.3:8000/api/orders/', {
-        headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {},
+      const response = await fetchWithAutoRefresh(async (accessToken) => {
+        return await fetch('http://192.168.1.90:8000/api/orders/', {
+          headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {},
+        });
       });
       
       if (!response.ok) {
-        if (response.status === 401) {
-          Alert.alert('Session Expired', 'Please log in again.');
-          return;
-        }
         throw new Error(`Failed to fetch orders: ${response.status}`);
       }
       

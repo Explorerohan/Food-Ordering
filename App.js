@@ -177,7 +177,7 @@ export default function App() {
       // Add a timeout to prevent hanging
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 7000); // 7 seconds
-              const res = await fetch('http://192.168.254.3:8000/api/profile/me/', {
+              const res = await fetch('http://192.168.1.90:8000/api/profile/me/', {
         headers: { 'Authorization': `Bearer ${token}` },
         signal: controller.signal,
       });

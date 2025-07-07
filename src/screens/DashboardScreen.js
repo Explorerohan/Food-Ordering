@@ -19,7 +19,6 @@ import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 
 import FoodItemCard from '../components/FoodItemCard';
 import CategoryFilter from '../components/CategoryFilter';
-import OffersCarousel from '../components/OffersCarousel';
 import { foodApi, mockFoodData } from '../services/api';
 
 const DashboardScreen = ({ username }) => {
@@ -45,17 +44,18 @@ const DashboardScreen = ({ username }) => {
       const data = await foodApi.getAllFoodItems();
       setFoodItems(data);
       
-      // Extract categories from data, excluding 'All' if it exists
-      const apiCategories = [...new Set(
-        data.map(item => 
-          typeof item.category === 'object' && item.category !== null
-            ? item.category.name
-            : item.category
-        ).filter(category => category && category !== 'All') // Remove null/undefined and 'All'
-      )];
-
+      // Extract categories as objects with name and image
+      const categoryMap = {};
+      data.forEach(item => {
+        if (item.category && item.category.name) {
+          categoryMap[item.category.name] = item.category.image || null;
+        } else if (item.category && typeof item.category === 'string') {
+          categoryMap[item.category] = null;
+        }
+      });
+      const apiCategories = Object.entries(categoryMap).map(([name, image]) => ({ name, image }));
       // Add 'All' at the beginning
-      setCategories(['All', ...apiCategories]);
+      setCategories([{ name: 'All', image: null }, ...apiCategories]);
     } catch (error) {
       console.error('Error fetching food items:', error);
       Alert.alert(
@@ -123,7 +123,7 @@ const DashboardScreen = ({ username }) => {
   const handleAddToCart = async (item) => {
     try {
       const accessToken = await AsyncStorage.getItem('accessToken');
-      const response = await fetch('http://192.168.254.3:8000/api/cart/', {
+      const response = await fetch('http://192.168.1.90:8000/api/cart/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -197,7 +197,6 @@ const DashboardScreen = ({ username }) => {
       <FlatList
         ListHeaderComponent={
           <>
-            <OffersCarousel />
             <CategoryFilter
               categories={categories}
               selectedCategory={selectedCategory}

@@ -39,6 +39,7 @@ const CategoryFilter = ({ categories, selectedCategory, onSelectCategory }) => {
                 styles.categoryText,
                 selectedCategory === categoryObj.name && styles.selectedCategoryText,
               ]}
+              numberOfLines={1}
             >
               {categoryObj.name}
             </Text>
@@ -58,42 +59,44 @@ const styles = StyleSheet.create({
     // borderBottomColor: '#f0f0f0',
   },
   scrollContent: {
-    paddingHorizontal: 0, // Remove extra horizontal padding
-    paddingVertical: 0, // Remove extra vertical padding
-    paddingLeft: 16, // Add left padding to align first category with food items
+    paddingHorizontal: 16,
+    paddingVertical: 0,
   },
   categoryButton: {
-    width: 80,
-    height: 90,
-    paddingHorizontal: 0,
-    paddingVertical: 0,
-    marginRight: 12,
-    borderRadius: 12,
-    backgroundColor: '#e0e0e0',
+    width: 72,
+    height: 92,
+    marginRight: 0,
+    marginLeft: 0,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    backgroundColor: 'transparent',
     borderWidth: 0,
     elevation: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   selectedCategory: {
-    backgroundColor: '#FF6B35',
-    borderColor: '#FF6B35',
-    borderWidth: 1,
-  },
-  categoryText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-  },
-  selectedCategoryText: {
-    color: '#fff',
+    backgroundColor: 'transparent',
+    borderBottomWidth: 2,
+    borderBottomColor: '#FF6B35',
   },
   categoryImage: {
-    width: 56,
-    height: 56,
-    borderRadius: 8,
+    width: 64,
+    height: 64,
+    borderRadius: 18,
     marginBottom: 6,
     backgroundColor: '#fff',
+    borderWidth: 2,
+    borderColor: '#eee',
+  },
+  categoryText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#222',
+    textAlign: 'center',
+    marginTop: 2,
+  },
+  selectedCategoryText: {
+    color: '#FF6B35',
+    fontWeight: 'bold',
   },
 });
 

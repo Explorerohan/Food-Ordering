@@ -108,27 +108,6 @@ function MainTabs({ username, email, profilePicture, bio, onLogout, navigation, 
           else if (route.name === 'Cart') iconName = 'cart-outline';
           else if (route.name === 'MyOrders') iconName = 'bag-outline';
           else if (route.name === 'Chat') iconName = 'chatbubble-ellipses-outline';
-          // Custom profile icon with user image
-          if (route.name === 'Profile' && profilePicture) {
-            return (
-              <View style={{
-                width: size,
-                height: size,
-                borderRadius: size / 2,
-                overflow: 'hidden',
-                borderWidth: focused ? 2 : 1,
-                borderColor: focused ? '#FF6B35' : '#ccc',
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}>
-                <Image
-                  source={{ uri: profilePicture }}
-                  style={{ width: size, height: size, borderRadius: size / 2 }}
-                  resizeMode="cover"
-                />
-              </View>
-            );
-          }
           return <Ionicons name={iconName} size={size} color={color} />;
         },
       })}

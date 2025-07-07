@@ -41,17 +41,26 @@ const FoodItemCard = ({ item, onPress, onAddToCart }) => {
         <Text style={styles.name} numberOfLines={1}>
           {item.name}
         </Text>
+        {/* Price row */}
         <View style={styles.row}>
           <Text style={styles.price}>
             {smallSize ? `₹${smallSize.price}` : 'N/A'}
           </Text>
         </View>
-        {avgRating !== null && (
+        {/* Stars and cart button in the same row if rating exists, else cart button alone */}
+        {avgRating !== null ? (
           <View style={styles.ratingRow}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               {renderStars(avgRating)}
               <Text style={styles.ratingNumber}>{avgRating.toFixed(2)}</Text>
             </View>
+            <TouchableOpacity style={styles.cartBtn} onPress={(e) => { e.stopPropagation(); onAddToCart(item); }}>
+              <Ionicons name="cart-outline" size={18} color="#FF6B35" />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.ratingRow}>
+            <View style={{ flex: 1 }} />
             <TouchableOpacity style={styles.cartBtn} onPress={(e) => { e.stopPropagation(); onAddToCart(item); }}>
               <Ionicons name="cart-outline" size={18} color="#FF6B35" />
             </TouchableOpacity>
@@ -93,7 +102,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#222',
-    marginBottom: 1,
+    marginBottom: 3,
     textAlign: 'left',
   },
   row: {
@@ -118,8 +127,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 2,
-    marginBottom: 0,
+    marginTop: 0,
+    marginBottom: 3,
   },
   ratingNumber: {
     fontSize: 12,

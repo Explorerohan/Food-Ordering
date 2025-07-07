@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
+  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -23,7 +24,7 @@ import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 
 import FoodItemCard from '../components/FoodItemCard';
 import CategoryFilter from '../components/CategoryFilter';
-import { foodApi, mockFoodData } from '../services/api';
+import { foodApi, mockFoodData, profileApi } from '../services/api';
 
 const API_BASE_URL = 'http://192.168.1.90:8000';
 
@@ -35,10 +36,49 @@ const DashboardScreen = ({ username }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [categories, setCategories] = useState([]);
+  const [profileImage, setProfileImage] = useState(null);
+  const [displayedIndex, setDisplayedIndex] = useState(0);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const slideAnim = React.useRef(new Animated.Value(0)).current;
 
-  // Add a static profile image and address for the top bar
-  const staticProfileImage = 'https://randomuser.me/api/portraits/men/32.jpg';
   const staticAddress = 'Itahari-halgada';
+
+  // Dynamic placeholder cycling through food names
+  const foodNames = [
+    'Pizza',
+    'Burger',
+    'Biryani',
+    'Pasta',
+    'Sushi',
+    'Tacos',
+    'Dosa',
+    'Paneer',
+    'Noodles',
+    'Salad',
+  ];
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIsAnimating(true);
+      // Animate out (down)
+      Animated.timing(slideAnim, {
+        toValue: 1,
+        duration: 220,
+        useNativeDriver: true,
+      }).start(() => {
+        // After out, update text and animate in
+        setDisplayedIndex((prev) => (prev + 1) % foodNames.length);
+        slideAnim.setValue(-1); // Start new text above
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 220,
+          useNativeDriver: true,
+        }).start(() => {
+          setIsAnimating(false);
+        });
+      });
+    }, 2000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     fetchFoodItems();
@@ -47,6 +87,21 @@ const DashboardScreen = ({ username }) => {
   useEffect(() => {
     filterItems();
   }, [foodItems, selectedCategory]);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const profile = await profileApi.getProfile();
+        if (profile && profile.profile_picture) {
+          setProfileImage(profile.profile_picture);
+        }
+      } catch (error) {
+        // fallback to static image if needed
+        setProfileImage('https://randomuser.me/api/portraits/men/32.jpg');
+      }
+    };
+    fetchProfile();
+  }, []);
 
   const fetchFoodItems = async () => {
     try {
@@ -147,6 +202,13 @@ const DashboardScreen = ({ username }) => {
 
   const handleAddToCart = async (item) => {
     try {
+      // Determine default size and spice level
+      const sizes = item.sizes || [];
+      let size_string = 'Small';
+      if (!sizes.find(s => s.size === 'Small') && sizes.length > 0) {
+        size_string = sizes[0].size;
+      }
+      const spice_level = 'Mild';
       const accessToken = await AsyncStorage.getItem('accessToken');
       const response = await fetch('http://192.168.1.90:8000/api/cart/', {
         method: 'POST',
@@ -154,13 +216,12 @@ const DashboardScreen = ({ username }) => {
           'Content-Type': 'application/json',
           ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
         },
-        body: JSON.stringify({ food_item_id: item.id, quantity: 1 }),
+        body: JSON.stringify({ food_item_id: item.id, quantity: 1, size_string, spice_level }),
       });
       if (!response.ok) throw new Error('Failed to add to cart');
       const cartData = await response.json();
-      // Optionally store cartData in AsyncStorage or state for CartScreen
       await AsyncStorage.setItem('cart', JSON.stringify(cartData));
-      Alert.alert('Added to Cart', `${item.name} has been added to your cart.`);
+      Alert.alert('Added to Cart', `${item.name} (${size_string}, ${spice_level}) has been added to your cart.`);
     } catch (error) {
       Alert.alert('Error', 'Could not add to cart. Please try again.');
     }
@@ -192,7 +253,7 @@ const DashboardScreen = ({ username }) => {
           <Text style={styles.addressText}>{staticAddress}</Text>
         </View>
         <TouchableOpacity style={styles.profileImageContainer}>
-          <Image source={{ uri: staticProfileImage }} style={styles.profileImage} />
+          <Image source={{ uri: profileImage || 'https://randomuser.me/api/portraits/men/32.jpg' }} style={styles.profileImage} />
         </TouchableOpacity>
       </View>
       <Text style={styles.greetingHello}><Text style={styles.greetingHelloBold}>Hello Rohan!</Text> <Text style={styles.greetingWave}>👋</Text></Text>
@@ -200,10 +261,37 @@ const DashboardScreen = ({ username }) => {
       <View style={styles.searchRow}>
         <View style={styles.searchBox}>
           <Ionicons name="search-outline" size={20} color="#888" style={{ marginRight: 8 }} />
+          <View style={styles.animatedPlaceholderContainer} pointerEvents="none">
+            <Animated.Text
+              style={[
+                styles.animatedPlaceholder,
+                {
+                  transform: [
+                    {
+                      translateY: slideAnim.interpolate({
+                        inputRange: [-1, 0, 1],
+                        outputRange: [-32, 0, 32],
+                      }),
+                    },
+                  ],
+                  opacity: slideAnim.interpolate({
+                    inputRange: [-1, 0, 1],
+                    outputRange: [0, 1, 0],
+                  }),
+                },
+              ]}
+              numberOfLines={1}
+            >
+              {`Search ${foodNames[displayedIndex]}...`}
+            </Animated.Text>
+          </View>
           <TextInput
-            placeholder="Find food or restaurant..."
-            style={styles.searchInput}
-            placeholderTextColor="#888"
+            style={[styles.searchInput, { position: 'absolute', left: 0, right: 0, width: '100%' }]}
+            placeholder=""
+            value={''}
+            underlineColorAndroid="transparent"
+            autoCorrect={false}
+            autoCapitalize="none"
           />
         </View>
         <TouchableOpacity style={styles.filterButton}>
@@ -222,6 +310,49 @@ const DashboardScreen = ({ username }) => {
       </Text>
     </View>
   );
+
+  // Helper to calculate average rating for a food item
+  const getAverageRating = (item) => {
+    if (Array.isArray(item.reviews) && item.reviews.length > 0) {
+      const total = item.reviews.reduce((sum, r) => sum + (r.rating || 0), 0);
+      return total / item.reviews.length;
+    }
+    return null;
+  };
+
+  // Find the best seller (highest average rating)
+  const bestSeller = React.useMemo(() => {
+    if (!foodItems.length) return null;
+    let maxAvg = -1;
+    let best = null;
+    foodItems.forEach(item => {
+      const avg = getAverageRating(item);
+      if (avg !== null && avg > maxAvg) {
+        maxAvg = avg;
+        best = item;
+      }
+    });
+    return best;
+  }, [foodItems]);
+
+  // Handler for 'View All' in Best Seller section
+  const handleViewAllBestSellers = () => {
+    // Sort all food items by average rating (descending)
+    const sorted = [...foodItems].sort((a, b) => {
+      const avgA = getAverageRating(a) || 0;
+      const avgB = getAverageRating(b) || 0;
+      return avgB - avgA;
+    });
+    setFilteredItems(sorted);
+    setSelectedCategory('All');
+  };
+
+  // Handler for clicking best seller image
+  const handleBestSellerPress = () => {
+    if (bestSeller) {
+      navigation.navigate('FoodDetail', { item: bestSeller });
+    }
+  };
 
   if (loading) {
     return (
@@ -246,38 +377,36 @@ const DashboardScreen = ({ username }) => {
       >
         <View style={styles.sectionRow}>
           <Text style={styles.sectionTitle}>Best Seller</Text>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={handleViewAllBestSellers}>
             <Text style={styles.sectionViewAll}>View All</Text>
           </TouchableOpacity>
         </View>
-        {/* Sample best seller card */}
-        <View style={styles.featuredCard}>
-          <Image
-            source={{ uri: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80' }}
-            style={styles.featuredImage}
-          />
-          <View style={styles.featuredInfoRow}>
-            <Text style={styles.featuredTitle}>Kfc's</Text>
-            <View style={styles.featuredRatingRow}>
-              <Ionicons name="star" size={16} color="#FFB300" />
-              <Text style={styles.featuredRatingText}>4.5</Text>
-              <Text style={styles.featuredRatingCount}>(25+)</Text>
+        {/* Dynamic best seller card */}
+        {bestSeller && (
+          <TouchableOpacity style={styles.featuredCard} onPress={handleBestSellerPress} activeOpacity={0.85}>
+            <Image
+              source={{ uri: bestSeller.image }}
+              style={styles.featuredImage}
+            />
+            <View style={styles.featuredInfoRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.featuredTitle}>{bestSeller.name}</Text>
+                <View style={styles.featuredRatingRow}>
+                  <Ionicons name="star" size={16} color="#FFB300" />
+                  <Text style={styles.featuredRatingText}>
+                    {getAverageRating(bestSeller)?.toFixed(2) ?? 'N/A'}
+                  </Text>
+                  <Text style={styles.featuredRatingCount}>
+                    ({bestSeller.reviews?.length || 0})
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity style={styles.featuredCartBtn} onPress={(e) => { e.stopPropagation(); handleAddToCart(bestSeller); }}>
+                <Ionicons name="cart-outline" size={22} color="#FF6B35" />
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity>
-              <Ionicons name="heart-outline" size={22} color="#2ecc40" />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.featuredDetailsRow}>
-            <Text style={styles.featuredDetail}><Ionicons name="bicycle" size={14} color="#2ecc40" /> Free delivery</Text>
-            <Text style={styles.featuredDetail}><Ionicons name="time-outline" size={14} color="#2ecc40" /> 10-15 mins</Text>
-          </View>
-          <View style={styles.featuredTagsRow}>
-            <Text style={styles.featuredTag}>Seafood</Text>
-            <Text style={styles.featuredTag}>Snack</Text>
-            <Text style={styles.featuredTag}>Dessert</Text>
-            <Text style={styles.featuredTag}>Salmon Fish</Text>
-          </View>
-        </View>
+          </TouchableOpacity>
+        )}
         <View style={styles.sectionRow}>
           <Text style={styles.sectionTitle}>Top Categories</Text>
           <TouchableOpacity>
@@ -414,6 +543,23 @@ const styles = StyleSheet.create({
     height: 44,
     marginRight: 10,
   },
+  animatedPlaceholderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    position: 'relative',
+    height: 32,
+    overflow: 'hidden',
+  },
+  animatedPlaceholder: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    color: '#888',
+    fontSize: 18,
+    paddingLeft: 0,
+    paddingRight: 0,
+    textAlignVertical: 'center',
+  },
   searchInput: {
     flex: 1,
     fontSize: 15,
@@ -463,7 +609,7 @@ const styles = StyleSheet.create({
   },
   featuredImage: {
     width: '100%',
-    height: 140,
+    height: 170,
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
     marginBottom: 10,
@@ -472,27 +618,37 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    marginBottom: 4,
+    paddingHorizontal: 8,
+    marginBottom: 0,
   },
   featuredTitle: {
-    fontSize: 17,
-    fontWeight: 'bold',
+    fontSize: 15,
+    fontWeight: '600',
     color: '#222',
+    marginRight: 6,
+    flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
+    paddingVertical: 0,
+    paddingHorizontal: 0,
   },
   featuredRatingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: 8,
+    justifyContent: 'flex-start',
+    marginLeft: 0,
+    marginRight: 0,
+    padding: 0,
+    marginBottom: 0,
   },
   featuredRatingText: {
-    fontSize: 15,
+    fontSize: 13,
     color: '#222',
-    fontWeight: 'bold',
-    marginLeft: 3,
+    fontWeight: '500',
+    marginLeft: 2,
   },
   featuredRatingCount: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#888',
     marginLeft: 2,
   },
@@ -555,6 +711,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#999',
     marginTop: 8,
+  },
+  featuredCartBtn: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#FF6B35',
+    borderRadius: 16,
+    padding: 5,
+    marginLeft: 8,
+    alignSelf: 'flex-start',
   },
 });
 

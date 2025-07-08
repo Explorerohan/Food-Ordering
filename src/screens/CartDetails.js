@@ -1,11 +1,18 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, ActivityIndicator, FlatList, TouchableOpacity, Alert, StyleSheet, Image, Platform, StatusBar, Modal, TextInput } from 'react-native';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { View, Text, ActivityIndicator, FlatList, TouchableOpacity, Alert, StyleSheet, Image, Platform, StatusBar, Modal, TextInput, Dimensions, KeyboardAvoidingView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView as SafeAreaViewContext } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { fetchWithAutoRefresh } from '../services/api';
+import MapView, { Marker } from 'react-native-maps';
+import * as Location from 'expo-location';
+import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
+
+const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
+
+const GOOGLE_MAPS_API_KEY = 'YOUR_GOOGLE_MAPS_API_KEY'; // <-- Replace with your API key
 
 const CartDetails = ({ navigation, route }) => {
   const [cartItems, setCartItems] = useState([]);
@@ -16,6 +23,18 @@ const CartDetails = ({ navigation, route }) => {
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [orderDescription, setOrderDescription] = useState('');
   const [proceeding, setProceeding] = useState(false);
+  const [showMapModal, setShowMapModal] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState(null); // { latitude, longitude }
+  const [initialRegion, setInitialRegion] = useState({
+    latitude: 27.7172, // Default to Kathmandu
+    longitude: 85.3240,
+    latitudeDelta: 0.01,
+    longitudeDelta: 0.01,
+  });
+  const [searchRegion, setSearchRegion] = useState(initialRegion);
+  const [currentLocation, setCurrentLocation] = useState(null);
+  const mapRef = useRef(null);
+  const placesRef = useRef(null);
 
   // Refresh cart data when screen comes into focus
   useFocusEffect(
@@ -32,6 +51,42 @@ const CartDetails = ({ navigation, route }) => {
       navigation.setParams({ refresh: undefined });
     }
   }, [route.params?.refresh]);
+
+  // Get user's current location for map centering
+  useEffect(() => {
+    (async () => {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return;
+      let location = await Location.getCurrentPositionAsync({});
+      const region = {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      };
+      setInitialRegion(region);
+      setSearchRegion(region);
+    })();
+  }, []);
+
+  // When map modal opens, get current location
+  useEffect(() => {
+    if (showMapModal) {
+      (async () => {
+        let { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') return;
+        let location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Highest,
+          maximumAge: 10000,
+          timeout: 20000,
+        });
+        setCurrentLocation({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        });
+      })();
+    }
+  }, [showMapModal]);
 
   const fetchCart = async (isRefreshing = false) => {
     try {
@@ -90,8 +145,8 @@ const CartDetails = ({ navigation, route }) => {
   };
 
   const handleProceedCheckout = async () => {
-    if (!deliveryAddress.trim()) {
-      Alert.alert('Missing Address', 'Please enter your delivery address.');
+    if (!selectedLocation) {
+      Alert.alert('Missing Location', 'Please select your delivery location.');
       return;
     }
     setProceeding(true);
@@ -105,7 +160,8 @@ const CartDetails = ({ navigation, route }) => {
           },
           body: JSON.stringify({
             description: orderDescription,
-            delivery_address: deliveryAddress,
+            latitude: selectedLocation.latitude,
+            longitude: selectedLocation.longitude,
           }),
         });
       });
@@ -117,8 +173,8 @@ const CartDetails = ({ navigation, route }) => {
 
       const result = await response.json();
       setShowCheckoutModal(false);
-      setDeliveryAddress('');
       setOrderDescription('');
+      setSelectedLocation(null);
       setProceeding(false);
       Alert.alert(
         'Order Placed Successfully! 🎉',
@@ -290,14 +346,17 @@ const CartDetails = ({ navigation, route }) => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Enter Delivery Details</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Delivery Address"
-              value={deliveryAddress}
-              onChangeText={setDeliveryAddress}
-              multiline
-              numberOfLines={2}
-            />
+            <TouchableOpacity
+              style={styles.locationBtn}
+              onPress={() => setShowMapModal(true)}
+            >
+              <Ionicons name="location-outline" size={20} color="#FF6B35" />
+              <Text style={styles.locationBtnText}>
+                {selectedLocation
+                  ? `Lat: ${selectedLocation.latitude.toFixed(5)}, Lng: ${selectedLocation.longitude.toFixed(5)}`
+                  : 'Enter your current address for delivery'}
+              </Text>
+            </TouchableOpacity>
             <TextInput
               style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
               placeholder="Order Description. If you want to add any special instructions, please add them here."
@@ -316,6 +375,133 @@ const CartDetails = ({ navigation, route }) => {
                 disabled={proceeding}
               >
                 <Text style={{ color: '#fff', fontWeight: '600' }}>{proceeding ? 'Processing...' : 'Proceed'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      {/* Map Modal */}
+      <Modal
+        visible={showMapModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowMapModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.bigMapModal, { height: SCREEN_HEIGHT * 0.8, width: SCREEN_WIDTH * 0.95 }]}> 
+            <GooglePlacesAutocomplete
+              ref={placesRef}
+              placeholder="Search for a place"
+              fetchDetails={true}
+              onPress={(data, details = null) => {
+                const { lat, lng } = details.geometry.location;
+                const region = {
+                  latitude: lat,
+                  longitude: lng,
+                  latitudeDelta: 0.01,
+                  longitudeDelta: 0.01,
+                };
+                setSelectedLocation({ latitude: lat, longitude: lng });
+                setSearchRegion(region);
+                if (mapRef.current) {
+                  mapRef.current.animateToRegion(region, 1000);
+                }
+              }}
+              query={{
+                key: GOOGLE_MAPS_API_KEY,
+                language: 'en',
+                location: currentLocation ? `${currentLocation.latitude},${currentLocation.longitude}` : undefined,
+                radius: 50000, // 50km
+              }}
+              styles={{
+                container: { 
+                  position: 'absolute', 
+                  top: 10, 
+                  width: '80%',        // Reduce width
+                  left: '10%',         // Center horizontally
+                  zIndex: 2 
+                },
+                listView: { backgroundColor: 'white', zIndex: 3 },
+                textInputContainer: { position: 'relative' },
+                textInput: { fontSize: 16, paddingRight: 36 },
+              }}
+              enablePoweredByContainer={false}
+              renderRightButton={() => (
+                <TouchableOpacity
+                  style={{
+                    position: 'absolute',
+                    right: 10,
+                    top: 0,
+                    bottom: 0,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    height: '100%',
+                    zIndex: 10,
+                  }}
+                  onPress={() => {
+                    if (placesRef.current) {
+                      placesRef.current.focus();
+                    }
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="search" size={20} color="#888" />
+                </TouchableOpacity>
+              )}
+            />
+            <MapView
+              ref={mapRef}
+              style={{ flex: 1, minHeight: 400 }}
+              region={searchRegion}
+              onPress={e => setSelectedLocation(e.nativeEvent.coordinate)}
+            >
+              {selectedLocation && (
+                <Marker coordinate={selectedLocation} />
+              )}
+            </MapView>
+            <TouchableOpacity
+              style={[styles.modalBtn, { backgroundColor: '#FF6B35', margin: 12 }]}
+              onPress={async () => {
+                let { status } = await Location.requestForegroundPermissionsAsync();
+                if (status !== 'granted') {
+                  Alert.alert('Permission denied', 'Location permission is required.');
+                  return;
+                }
+                setProceeding(true);
+                try {
+                  let location = await Location.getCurrentPositionAsync({
+                    accuracy: Location.Accuracy.Highest,
+                    maximumAge: 10000,
+                    timeout: 20000, // Wait up to 20 seconds for a GPS fix
+                  });
+                  setSelectedLocation({
+                    latitude: location.coords.latitude,
+                    longitude: location.coords.longitude,
+                  });
+                  setShowMapModal(false);
+                } catch (e) {
+                  Alert.alert('Error', 'Could not get your precise location. Please try again, or move to an area with better GPS signal.');
+                }
+                setProceeding(false);
+              }}
+              disabled={proceeding}
+            >
+              {proceeding ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={{ color: '#fff', fontWeight: '600', fontSize: 16 }}>Proceed with Current Location</Text>
+              )}
+            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', padding: 12, backgroundColor: '#fff' }}>
+              <TouchableOpacity onPress={() => setShowMapModal(false)} style={[styles.modalBtn, { backgroundColor: '#ccc' }]}> 
+                <Text style={{ color: '#222', fontWeight: '600' }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={() => setShowMapModal(false)} 
+                style={[styles.modalBtn, { backgroundColor: '#FF6B35', marginLeft: 10 }]} 
+                disabled={!selectedLocation}
+              >
+                <Text style={{ color: '#fff', fontWeight: '600' }}>Select</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -569,6 +755,33 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  locationBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fafafa',
+    borderWidth: 1,
+    borderColor: '#eee',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+  },
+  locationBtnText: {
+    marginLeft: 8,
+    color: '#222',
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  bigMapModal: {
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 0,
+    overflow: 'hidden',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
   },
 });
 

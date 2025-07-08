@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, ActivityIndicator, FlatList, TouchableOpacity, Alert, StyleSheet, Image, Platform, StatusBar } from 'react-native';
+import { View, Text, ActivityIndicator, FlatList, TouchableOpacity, Alert, StyleSheet, Image, Platform, StatusBar, Modal, TextInput } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView as SafeAreaViewContext } from 'react-native-safe-area-context';
@@ -12,6 +12,10 @@ const CartDetails = ({ navigation, route }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [total, setTotal] = useState(0);
+  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
+  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [orderDescription, setOrderDescription] = useState('');
+  const [proceeding, setProceeding] = useState(false);
 
   // Refresh cart data when screen comes into focus
   useFocusEffect(
@@ -77,61 +81,63 @@ const CartDetails = ({ navigation, route }) => {
     fetchCart(true);
   };
 
-  const handleCheckout = async () => {
+  const handleCheckout = () => {
     if (cartItems.length === 0) {
       Alert.alert('Empty Cart', 'Please add items to your cart before checkout.');
       return;
     }
-    
-    Alert.alert(
-      'Checkout',
-      `Total: ₹${total.toFixed(2)}\n\nProceed to checkout?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Proceed', onPress: async () => {
-          try {
-            const response = await fetchWithAutoRefresh(async (accessToken) => {
-              return await fetch('http://192.168.1.90:8000/api/cart/checkout/', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${accessToken}`,
-                },
-                body: JSON.stringify({
-                  description: `Order from ${new Date().toLocaleDateString()}`,
-                }),
-              });
-            });
+    setShowCheckoutModal(true);
+  };
 
-            if (!response.ok) {
-              const errorData = await response.json();
-              throw new Error(errorData.error || 'Failed to create order');
+  const handleProceedCheckout = async () => {
+    if (!deliveryAddress.trim()) {
+      Alert.alert('Missing Address', 'Please enter your delivery address.');
+      return;
+    }
+    setProceeding(true);
+    try {
+      const response = await fetchWithAutoRefresh(async (accessToken) => {
+        return await fetch('http://192.168.1.90:8000/api/cart/checkout/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            description: orderDescription,
+            delivery_address: deliveryAddress,
+          }),
+        });
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create order');
+      }
+
+      const result = await response.json();
+      setShowCheckoutModal(false);
+      setDeliveryAddress('');
+      setOrderDescription('');
+      setProceeding(false);
+      Alert.alert(
+        'Order Placed Successfully! 🎉',
+        `Order #${result.order.id} has been created.\n\nTotal: ₹${result.order.total_amount}\n\nYour cart has been cleared.`,
+        [
+          { 
+            text: 'Continue Shopping', 
+            onPress: () => {
+              setCartItems([]);
+              setTotal(0);
+              navigation.goBack();
             }
-
-            const result = await response.json();
-            
-            Alert.alert(
-              'Order Placed Successfully! 🎉',
-              `Order #${result.order.id} has been created.\n\nTotal: ₹${result.order.total_amount}\n\nYour cart has been cleared.`,
-              [
-                { 
-                  text: 'Continue Shopping', 
-                  onPress: () => {
-                    // Clear cart state and go back
-                    setCartItems([]);
-                    setTotal(0);
-                    navigation.goBack();
-                  }
-                }
-              ]
-            );
-          } catch (error) {
-            console.error('Checkout error:', error);
-            Alert.alert('Checkout Failed', error.message || 'Could not process your order. Please try again.');
           }
-        }}
-      ]
-    );
+        ]
+      );
+    } catch (error) {
+      setProceeding(false);
+      Alert.alert('Checkout Failed', error.message || 'Could not process your order. Please try again.');
+    }
   };
 
   const clearCart = async () => {
@@ -265,7 +271,7 @@ const CartDetails = ({ navigation, route }) => {
               </View>
               <TouchableOpacity 
                 style={[styles.checkoutBtn, cartItems.length === 0 && styles.disabledBtn]} 
-                onPress={() => handleCheckout()}
+                onPress={handleCheckout}
                 disabled={cartItems.length === 0}
               >
                 <Text style={styles.checkoutBtnText}>Checkout</Text>
@@ -274,6 +280,47 @@ const CartDetails = ({ navigation, route }) => {
           </>
         )}
       </View>
+      {/* Checkout Modal */}
+      <Modal
+        visible={showCheckoutModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowCheckoutModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Enter Delivery Details</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Delivery Address"
+              value={deliveryAddress}
+              onChangeText={setDeliveryAddress}
+              multiline
+              numberOfLines={2}
+            />
+            <TextInput
+              style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
+              placeholder="Order Description. If you want to add any special instructions, please add them here."
+              value={orderDescription}
+              onChangeText={setOrderDescription}
+              multiline
+              numberOfLines={3}
+            />
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 16 }}>
+              <TouchableOpacity onPress={() => setShowCheckoutModal(false)} style={[styles.modalBtn, { backgroundColor: '#ccc' }]}> 
+                <Text style={{ color: '#222', fontWeight: '600' }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={handleProceedCheckout} 
+                style={[styles.modalBtn, { backgroundColor: '#FF6B35', marginLeft: 10 }]} 
+                disabled={proceeding}
+              >
+                <Text style={{ color: '#fff', fontWeight: '600' }}>{proceeding ? 'Processing...' : 'Proceed'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaViewContext>
   );
 };
@@ -483,6 +530,45 @@ const styles = StyleSheet.create({
     margin: 0,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 24,
+    width: '85%',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 16,
+    color: '#222',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#eee',
+    borderRadius: 8,
+    padding: 10,
+    fontSize: 15,
+    marginBottom: 12,
+    backgroundColor: '#fafafa',
+  },
+  modalBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 22,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 

@@ -25,6 +25,17 @@ export const foodApi = {
     }
   },
 
+  // Get all categories
+  getAllCategories: async () => {
+    try {
+      const response = await api.get('/categories/');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      throw error;
+    }
+  },
+
   // Get food items by category
   getFoodItemsByCategory: async (category) => {
     try {

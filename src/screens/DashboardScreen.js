@@ -89,6 +89,10 @@ const DashboardScreen = ({ username }) => {
   }, [foodItems, selectedCategory]);
 
   useEffect(() => {
+    console.log('Categories state updated:', categories);
+  }, [categories]);
+
+  useEffect(() => {
     const fetchProfile = async () => {
       try {
         const profile = await profileApi.getProfile();
@@ -109,18 +113,39 @@ const DashboardScreen = ({ username }) => {
       const data = await foodApi.getAllFoodItems();
       setFoodItems(data);
       
-      // Extract categories as objects with name and image
-      const categoryMap = {};
-      data.forEach(item => {
-        if (item.category && item.category.name) {
-          categoryMap[item.category.name] = item.category.image || null;
-        } else if (item.category && typeof item.category === 'string') {
-          categoryMap[item.category] = null;
-        }
-      });
-      const apiCategories = Object.entries(categoryMap).map(([name, image]) => ({ name, image }));
-      // Add 'All' at the beginning with the provided URL image
-      setCategories([{ name: 'All', image: 'https://neat-food.com/cdn/shop/files/neat_emmapharaoh_19march24_12.jpg?v=1712845654&width=4498' }, ...apiCategories]);
+      // Fetch categories separately to ensure all categories are shown
+      try {
+        const categoriesData = await foodApi.getAllCategories();
+        console.log('Fetched categories from API:', categoriesData);
+        const apiCategories = categoriesData.map(category => ({ 
+          name: category.name, 
+          image: category.image 
+        }));
+        console.log('Processed categories:', apiCategories);
+        // Add 'All' at the beginning with the provided URL image
+        setCategories([{ 
+          name: 'All', 
+          image: 'https://neat-food.com/cdn/shop/files/neat_emmapharaoh_19march24_12.jpg?v=1712845654&width=4498' 
+        }, ...apiCategories]);
+      } catch (categoryError) {
+        console.error('Error fetching categories:', categoryError);
+        // Fallback to extracting categories from food items
+        const categoryMap = {};
+        data.forEach(item => {
+          if (item.category && item.category.name) {
+            categoryMap[item.category.name] = item.category.image || null;
+          } else if (item.category && typeof item.category === 'string') {
+            categoryMap[item.category] = null;
+          }
+        });
+        const apiCategories = Object.entries(categoryMap).map(([name, image]) => ({ name, image }));
+        console.log('Fallback categories from food items:', apiCategories);
+        // Add 'All' at the beginning with the provided URL image
+        setCategories([{ 
+          name: 'All', 
+          image: 'https://neat-food.com/cdn/shop/files/neat_emmapharaoh_19march24_12.jpg?v=1712845654&width=4498' 
+        }, ...apiCategories]);
+      }
     } catch (error) {
       console.error('Error fetching food items:', error);
       Alert.alert(
@@ -384,26 +409,27 @@ const DashboardScreen = ({ username }) => {
         {/* Dynamic best seller card */}
         {bestSeller && (
           <TouchableOpacity style={styles.featuredCard} onPress={handleBestSellerPress} activeOpacity={0.85}>
-            <Image
-              source={{ uri: bestSeller.image }}
-              style={styles.featuredImage}
-            />
+            <View style={{ position: 'relative' }}>
+              <Image
+                source={{ uri: bestSeller.image }}
+                style={styles.featuredImage}
+              />
+              {/* Average rating star and value top left */}
+              <View style={styles.featuredStar}>
+                <Ionicons name="star" size={18} color="#FFB300" />
+                <Text style={styles.featuredStarText}>
+                  {getAverageRating(bestSeller)?.toFixed(2) ?? 'N/A'}
+                </Text>
+              </View>
+              {/* Cart button top right */}
+              <TouchableOpacity style={styles.featuredCartOverlay} onPress={(e) => { e.stopPropagation(); handleAddToCart(bestSeller); }}>
+                <Ionicons name="cart-outline" size={22} color="#FF6B35" />
+              </TouchableOpacity>
+            </View>
             <View style={styles.featuredInfoRow}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.featuredTitle}>{bestSeller.name}</Text>
-                <View style={styles.featuredRatingRow}>
-                  <Ionicons name="star" size={16} color="#FFB300" />
-                  <Text style={styles.featuredRatingText}>
-                    {getAverageRating(bestSeller)?.toFixed(2) ?? 'N/A'}
-                  </Text>
-                  <Text style={styles.featuredRatingCount}>
-                    ({bestSeller.reviews?.length || 0})
-                  </Text>
-                </View>
               </View>
-              <TouchableOpacity style={styles.featuredCartBtn} onPress={(e) => { e.stopPropagation(); handleAddToCart(bestSeller); }}>
-                <Ionicons name="cart-outline" size={22} color="#FF6B35" />
-              </TouchableOpacity>
             </View>
           </TouchableOpacity>
         )}
@@ -712,14 +738,40 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 8,
   },
-  featuredCartBtn: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: '#FF6B35',
+  featuredStar: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    backgroundColor: '#fff',
     borderRadius: 16,
-    padding: 5,
-    marginLeft: 8,
-    alignSelf: 'flex-start',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    flexDirection: 'row',
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+  },
+  featuredStarText: {
+    fontSize: 14,
+    color: '#222',
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  featuredCartOverlay: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 3,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
   },
 });
 

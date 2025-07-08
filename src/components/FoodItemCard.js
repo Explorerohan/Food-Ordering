@@ -36,7 +36,9 @@ const FoodItemCard = ({ item, onPress, onAddToCart }) => {
 
   return (
     <TouchableOpacity style={styles.card} onPress={() => onPress(item)}>
-      <Image source={{ uri: item.image }} style={styles.image} />
+      <View style={styles.imageBox}>
+        <Image source={{ uri: item.image }} style={styles.image} />
+      </View>
       <View style={styles.content}>
         <Text style={styles.name} numberOfLines={1}>
           {item.name}
@@ -44,7 +46,7 @@ const FoodItemCard = ({ item, onPress, onAddToCart }) => {
         {/* Price row */}
         <View style={styles.row}>
           <Text style={styles.price}>
-            {smallSize ? `₹${smallSize.price}` : 'N/A'}
+            {smallSize ? `Rs. ${smallSize.price}` : 'N/A'}
           </Text>
         </View>
         {/* Stars and cart button in the same row if rating exists, else cart button alone */}
@@ -85,13 +87,28 @@ const styles = StyleSheet.create({
     width: (width - 48) / 2,
     padding: 0,
   },
+  imageBox: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    width: 170,
+    height: 120,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    marginTop: 10,
+    marginBottom: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
+  },
   image: {
     width: '100%',
-    height: 135,
-    borderTopLeftRadius: 14,
-    borderTopRightRadius: 14,
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
+    height: '100%',
+    borderRadius: 12,
+    resizeMode: 'cover',
   },
   content: {
     paddingHorizontal: 8,

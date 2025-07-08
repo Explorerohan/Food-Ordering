@@ -11,62 +11,69 @@ import {
 const CategoryFilter = ({ categories, selectedCategory, onSelectCategory }) => {
   return (
     <View style={styles.container}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-        decelerationRate="fast"
-        snapToAlignment="center"
-      >
-        {categories.map((categoryObj) => (
-          <TouchableOpacity
-            key={categoryObj.name}
-            style={[
-              styles.categoryButton,
-              selectedCategory === categoryObj.name && styles.selectedCategory,
-            ]}
-            onPress={() => onSelectCategory(categoryObj.name)}
-          >
-            {categoryObj.image && (
-              <Image
-                source={{ uri: categoryObj.image.startsWith('http') ? categoryObj.image : `http://192.168.1.90:8000${categoryObj.image}` }}
-                style={styles.categoryImage}
-                resizeMode="cover"
-              />
-            )}
-            <Text
+      <View style={styles.scrollContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          decelerationRate="normal"
+          snapToAlignment="start"
+          bounces={true}
+          alwaysBounceHorizontal={false}
+          automaticallyAdjustContentInsets={false}
+        >
+          {categories.map((categoryObj) => (
+            <TouchableOpacity
+              key={categoryObj.name}
               style={[
-                styles.categoryText,
-                selectedCategory === categoryObj.name && styles.selectedCategoryText,
+                styles.categoryButton,
+                selectedCategory === categoryObj.name && styles.selectedCategory,
               ]}
-              numberOfLines={1}
+              onPress={() => onSelectCategory(categoryObj.name)}
             >
-              {categoryObj.name}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+              {categoryObj.image && (
+                <Image
+                  source={{ uri: categoryObj.image.startsWith('http') ? categoryObj.image : `http://192.168.1.90:8000${categoryObj.image}` }}
+                  style={styles.categoryImage}
+                  resizeMode="cover"
+                />
+              )}
+              <Text
+                style={[
+                  styles.categoryText,
+                  selectedCategory === categoryObj.name && styles.selectedCategoryText,
+                ]}
+                numberOfLines={1}
+              >
+                {categoryObj.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    // Removed backgroundColor, border, and padding to eliminate the background box
-    // backgroundColor: '#fff',
-    // paddingVertical: 10,
-    // borderBottomWidth: 1,
-    // borderBottomColor: '#f0f0f0',
+    backgroundColor: '#fff',
+    paddingVertical: 0,
+    borderBottomWidth: 0, 
+  },
+  scrollContainer: {
+    overflow: 'hidden',
+    marginHorizontal: 16, 
   },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingVertical: 0,
+    paddingHorizontal: 0,
+    paddingVertical: 4,
+    paddingRight: 0, 
   },
   categoryButton: {
-    width: 72,
-    height: 92,
-    marginRight: 0,
-    marginLeft: 0,
+    width: 80,
+    height: 100,
+    marginRight: 1,
     alignItems: 'center',
     justifyContent: 'flex-start',
     backgroundColor: 'transparent',

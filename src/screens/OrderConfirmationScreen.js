@@ -4,6 +4,28 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// Helper function to refresh access token
+const refreshAccessToken = async () => {
+  const refreshToken = await AsyncStorage.getItem('refreshToken');
+  if (!refreshToken) return null;
+  try {
+    const response = await fetch('http://192.168.1.90:8000/api/token/refresh/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh: refreshToken }),
+    });
+    if (response.ok) {
+      const data = await response.json();
+      await AsyncStorage.setItem('accessToken', data.access);
+      return data.access;
+    } else {
+      return null;
+    }
+  } catch (error) {
+    return null;
+  }
+};
+
 const OrderConfirmationScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
@@ -25,27 +47,58 @@ const OrderConfirmationScreen = () => {
 
   const fetchCartItems = async () => {
     try {
-      const token = await AsyncStorage.getItem('accessToken');
-      console.log('Order summary token:', token);
-      const response = await fetch('http://192.168.1.90:8000/api/cart/', {
+      let token = await AsyncStorage.getItem('accessToken');
+      if (!token) {
+        Alert.alert('Auth Error', 'No access token found. Please log in again.');
+        setCartItems([]);
+        setTotalAmount(0);
+        return;
+      }
+      let response = await fetch('http://192.168.1.90:8000/api/cart/', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
       });
-      const data = await response.json();
-      console.log('Order summary cart data:', data);
-      const items = data.items || data.cart_items || [];
+      let data = await response.json();
+      // Handle expired token
+      if (data.code === 'token_not_valid') {
+        token = await refreshAccessToken();
+        if (token) {
+          response = await fetch('http://192.168.1.90:8000/api/cart/', {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+          data = await response.json();
+        } else {
+          Alert.alert('Session Expired', 'Please log in again.');
+          navigation.navigate('LoginScreen');
+          setCartItems([]);
+          setTotalAmount(0);
+          return;
+        }
+      }
+      const items = data.items || data.cart_items || data || [];
       setCartItems(items);
       calculateTotal(items);
     } catch (error) {
       setCartItems([]);
       setTotalAmount(0);
       console.error('Error fetching cart items:', error);
+      Alert.alert('Cart Error', 'Failed to fetch cart items. Please check your connection or login status.');
     }
   };
 
   const calculateTotal = (items) => {
-    const total = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const total = items.reduce((sum, item) => {
+      // Use food_price or price, and parse as float
+      const price = parseFloat(item.food_price || item.price || 0);
+      const quantity = parseInt(item.quantity || 0, 10);
+      // If price or quantity is NaN, treat as 0
+      const safePrice = isNaN(price) ? 0 : price;
+      const safeQuantity = isNaN(quantity) ? 0 : quantity;
+      return sum + (safePrice * safeQuantity);
+    }, 0);
     setTotalAmount(total);
   };
 
@@ -59,25 +112,59 @@ const OrderConfirmationScreen = () => {
         items: cartItems.map(item => ({
           food_item: item.food_item?.id || item.food_item || item.id,
           quantity: item.quantity,
-          price: item.price
+          price: item.food_price || item.price || 0
         })),
         total_amount: totalAmount,
       };
 
-      const response = await fetch('http://192.168.1.90:8000/api/orders/', {
+      let token = await AsyncStorage.getItem('accessToken');
+      let response = await fetch('http://192.168.1.90:8000/api/orders/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${await AsyncStorage.getItem('accessToken')}`,
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(orderData),
       });
 
+      // If unauthorized, try refreshing the token and retry
+      if (response.status === 401) {
+        token = await refreshAccessToken();
+        if (token) {
+          response = await fetch('http://192.168.1.90:8000/api/orders/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify(orderData),
+          });
+        } else {
+          Alert.alert('Session Expired', 'Please log in again.');
+          navigation.navigate('LoginScreen');
+          return;
+        }
+      }
+
       if (response.ok) {
+        // Clear the cart after successful order
+        try {
+          const clearToken = token || await AsyncStorage.getItem('accessToken');
+          await fetch('http://192.168.1.90:8000/api/cart/clear/', {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${clearToken}`,
+            },
+          });
+        } catch (clearErr) {
+          console.error('Error clearing cart after order:', clearErr);
+        }
         Alert.alert('Success', 'Order placed successfully!');
         navigation.popToTop();
       } else {
-        Alert.alert('Error', 'Failed to place order. Please try again.');
+        const errorText = await response.text();
+        console.error('Order placement error:', response.status, errorText);
+        Alert.alert('Error', `Failed to place order. Server says: ${errorText}`);
       }
     } catch (error) {
       console.error('Error placing order:', error);
@@ -97,14 +184,16 @@ const OrderConfirmationScreen = () => {
             <Ionicons name="close" size={28} color="#333" />
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={24} color="#333" />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+              <Ionicons name="arrow-back" size={24} color="#333" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Order Summary</Text>
+          </View>
         )}
-        <Text style={styles.headerTitle}>Order Summary</Text>
       </View>
 
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.content} contentContainerStyle={[styles.contentContainer, { paddingBottom: 40 }]} showsVerticalScrollIndicator={false}>
         {/* Delivery Details */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -130,11 +219,25 @@ const OrderConfirmationScreen = () => {
           ) : (
             <View>
               {cartItems.map((item, idx) => (
-                <Text key={idx} style={{ color: 'black', fontSize: 18 }}>
-                  {item.food_item?.name} - Qty: {item.quantity}
-                </Text>
+                <View key={idx} style={styles.cartItemCard}>
+                  <Image
+                    source={{ uri: item.food_item.image }}
+                    style={styles.cartItemImage}
+                  />
+                  <View style={styles.cartItemInfo}>
+                    <Text style={styles.cartItemName}>{item.food_item.name}</Text>
+                    <Text style={styles.cartItemDetails}>
+                      Size: <Text style={{fontWeight:'500'}}>{item.size.size}</Text>  |  Qty: <Text style={{fontWeight:'500'}}>{item.quantity}</Text>
+                    </Text>
+                    <Text style={styles.cartItemPrice}>
+                      ₹{item.food_price} each
+                    </Text>
+                    <Text style={styles.cartItemTotal}>
+                      Total: ₹{item.total_price}
+                    </Text>
+                  </View>
+                </View>
               ))}
-              <Text style={{ color: 'red', fontSize: 12 }}>Raw cart data: {JSON.stringify(cartItems)}</Text>
             </View>
           )}
         </View>
@@ -361,6 +464,50 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 12,
     fontWeight: '600',
+  },
+  cartItemCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fafafa',
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  cartItemImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    marginRight: 12,
+    backgroundColor: '#eee',
+  },
+  cartItemInfo: {
+    flex: 1,
+  },
+  cartItemName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#222',
+    marginBottom: 2,
+  },
+  cartItemDetails: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 2,
+  },
+  cartItemPrice: {
+    fontSize: 14,
+    color: '#FF6B35',
+    marginBottom: 2,
+  },
+  cartItemTotal: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '500',
   },
 });
 

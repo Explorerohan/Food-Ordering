@@ -264,7 +264,7 @@ const DashboardScreen = ({ username }) => {
   };
 
   const handleFoodItemPress = (item) => {
-    navigation.navigate('FoodDetail', { item });
+    navigation.navigate('FoodDetailScreen', { item });
   };
 
   const renderHeader = () => (
@@ -375,7 +375,7 @@ const DashboardScreen = ({ username }) => {
   // Handler for clicking best seller image
   const handleBestSellerPress = () => {
     if (bestSeller) {
-      navigation.navigate('FoodDetail', { item: bestSeller });
+      navigation.navigate('FoodDetailScreen', { item: bestSeller });
     }
   };
 

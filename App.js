@@ -17,6 +17,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import CartDetails from './src/screens/CartDetails';
 import OrderConfirmationScreen from './src/screens/OrderConfirmationScreen';
 import OrderHistoryScreen from './src/screens/OrderHistoryScreen';
+import MapScreen from './src/screens/MapScreen';
+import CheckoutFormScreen from './src/screens/CheckoutFormScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -83,14 +85,12 @@ function ProfileScreen({ username, email, profilePicture, bio, onLogout, navigat
   );
 }
 
-// Add placeholder MyOrdersScreen if not already defined
 const MyOrdersScreen = () => (
   <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
     <Text>My Orders Screen</Text>
   </View>
 );
 
-// Add placeholder component for Chat if not already defined
 const ChatScreen = () => (
   <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
     <Text>Chat Screen</Text>
@@ -126,7 +126,6 @@ function MainTabs({ username, email, profilePicture, bio, onLogout, navigation, 
   );
 }
 
-// Add MenuItem component below ProfileScreen
 function MenuItem({ icon, label, onPress, color }) {
   return (
     <TouchableOpacity onPress={onPress} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 18, paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: '#f6f6f6', backgroundColor: '#fff' }}>
@@ -146,18 +145,14 @@ export default function App() {
   const [bio, setBio] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
-  // Helper to fetch and store user profile details by userId
   const fetchAndStoreProfileDetails = async (token) => {
     try {
-      // Check if token exists and is valid
       if (!token || token.trim() === '') {
         throw new Error('No valid token provided');
       }
-      
-      // Add a timeout to prevent hanging
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 7000); // 7 seconds
-              const res = await fetch('http://192.168.1.90:8000/api/profile/me/', {
+      const res = await fetch('http://192.168.1.90:8000/api/profile/me/', {
         headers: { 'Authorization': `Bearer ${token}` },
         signal: controller.signal,
       });
@@ -201,7 +196,6 @@ export default function App() {
             await fetchAndStoreProfileDetails(token);
             setIsAuthenticated(true);
           } catch (e) {
-            // Token invalid or profile fetch failed
             setIsAuthenticated(false);
             setUsername('');
             setEmail('');
@@ -305,12 +299,15 @@ export default function App() {
             <Stack.Screen name="MainTabs">
               {props => <MainTabs {...props} username={username} email={email} profilePicture={profilePicture} bio={bio} onLogout={(nav) => handleLogout(nav || props.navigation)} navigation={props.navigation} onRefreshProfile={fetchAndStoreProfileDetails} />}
             </Stack.Screen>
-            <Stack.Screen name="FoodDetail" component={FoodDetailScreen} />
+            <Stack.Screen name="FoodDetailScreen" component={FoodDetailScreen} />
             <Stack.Screen name="EditProfile">
               {props => <EditProfileScreen {...props} onProfileUpdate={fetchAndStoreProfileDetails} />}
             </Stack.Screen>
             <Stack.Screen name="CartDetails" component={CartDetails} />
-            <Stack.Screen name="OrderConfirmation" component={OrderConfirmationScreen} />
+            <Stack.Screen name="OrderConfirmationScreen" component={OrderConfirmationScreen} />
+            <Stack.Screen name="OrderHistoryScreen" component={OrderHistoryScreen} />
+            <Stack.Screen name="MapScreen" component={MapScreen} />
+            <Stack.Screen name="CheckoutFormScreen" component={CheckoutFormScreen} />
           </>
         )}
       </Stack.Navigator>

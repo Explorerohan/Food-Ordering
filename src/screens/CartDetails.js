@@ -411,7 +411,17 @@ const CartDetails = ({ navigation, route }) => {
               style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
               region={searchRegion}
               onPress={e => {
+                const region = {
+                  latitude: e.nativeEvent.coordinate.latitude,
+                  longitude: e.nativeEvent.coordinate.longitude,
+                  latitudeDelta: 0.01,
+                  longitudeDelta: 0.01,
+                };
                 setSelectedLocation(e.nativeEvent.coordinate);
+                setSearchRegion(region);
+                if (mapRef.current) {
+                  mapRef.current.animateToRegion(region, 1000);
+                }
                 // Fetch address for tapped location
                 (async () => {
                   try {

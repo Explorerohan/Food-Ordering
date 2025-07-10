@@ -190,6 +190,17 @@ const MapScreen = ({ navigation, route }) => {
     await fetchDirections(newLocation, RESTAURANT_LOCATION);
   };
 
+  // Remove duplicates by place_id or display_name
+  const uniqueResults = [];
+  const seen = new Set();
+  for (const item of results) {
+    const key = item.place_id ? item.place_id : item.display_name;
+    if (!seen.has(key)) {
+      uniqueResults.push(item);
+      seen.add(key);
+    }
+  }
+
   return (
     <View style={styles.container}>
       <MapView
@@ -253,8 +264,8 @@ const MapScreen = ({ navigation, route }) => {
           style={styles.input}
         />
         <FlatList
-          data={results}
-          keyExtractor={(item) => item.place_id}
+          data={uniqueResults}
+          keyExtractor={(item, index) => (item.place_id ? item.place_id.toString() : index.toString())}
           renderItem={({ item }) => (
             <TouchableOpacity
               style={styles.item}

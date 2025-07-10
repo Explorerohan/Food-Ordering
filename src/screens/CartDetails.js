@@ -51,42 +51,6 @@ const CartDetails = ({ navigation, route }) => {
     }
   }, [route.params?.refresh]);
 
-  // Get user's current location for map centering
-  useEffect(() => {
-    (async () => {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') return;
-      let location = await Location.getCurrentPositionAsync({});
-      const region = {
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      };
-      setInitialRegion(region);
-      setSearchRegion(region);
-    })();
-  }, []);
-
-  // When map modal opens, get current location
-  useEffect(() => {
-    if (showMapModal) {
-      (async () => {
-        let { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') return;
-        let location = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Highest,
-          maximumAge: 10000,
-          timeout: 20000,
-        });
-        setCurrentLocation({
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-        });
-      })();
-    }
-  }, [showMapModal]);
-
   // Replace fetchAddressFromCoords with LocationIQ reverse geocoding
   const fetchAddressFromCoords = async (latitude, longitude) => {
     try {
@@ -371,7 +335,36 @@ const CartDetails = ({ navigation, route }) => {
             <Text style={styles.modalTitle}>Enter Delivery Details</Text>
             <TouchableOpacity
               style={styles.locationBtn}
-              onPress={() => setShowMapModal(true)}
+              onPress={async () => {
+                let { status } = await Location.requestForegroundPermissionsAsync();
+                if (status !== 'granted') {
+                  Alert.alert('Permission denied', 'Location permission is required to pick your delivery location.');
+                  return;
+                }
+                // Get current location for centering map
+                try {
+                  let location = await Location.getCurrentPositionAsync({
+                    accuracy: Location.Accuracy.Highest,
+                    maximumAge: 10000,
+                    timeout: 20000,
+                  });
+                  const region = {
+                    latitude: location.coords.latitude,
+                    longitude: location.coords.longitude,
+                    latitudeDelta: 0.01,
+                    longitudeDelta: 0.01,
+                  };
+                  setInitialRegion(region);
+                  setSearchRegion(region);
+                  setCurrentLocation({
+                    latitude: location.coords.latitude,
+                    longitude: location.coords.longitude,
+                  });
+                } catch (e) {
+                  // fallback to default region if location fails
+                }
+                setShowMapModal(true);
+              }}
             >
               <Ionicons name="location-outline" size={20} color="#FF6B35" />
               <Text style={styles.locationBtnText}>

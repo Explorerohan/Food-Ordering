@@ -42,7 +42,11 @@ const OrderHistoryScreen = ({ navigation }) => {
   );
 
   const renderOrderItem = ({ item }) => (
-    <View style={styles.orderCard}>
+    <TouchableOpacity 
+      style={styles.orderCard}
+      onPress={() => navigation.navigate('OrderDetail', { orderId: item.id })}
+      activeOpacity={0.7}
+    >
       <View style={styles.orderHeader}>
         <View>
           <Text style={styles.orderId}>Order #{item.id}</Text>
@@ -63,6 +67,8 @@ const OrderHistoryScreen = ({ navigation }) => {
             <Text style={styles.itemName}>{orderItem.food_item.name}</Text>
             <Text style={styles.itemDetails}>
               {orderItem.quantity}x ₹{orderItem.price}
+              {orderItem.size && ` • ${orderItem.size}`}
+              {orderItem.spice_level && ` • ${orderItem.spice_level}`}
             </Text>
           </View>
         ))}
@@ -72,7 +78,12 @@ const OrderHistoryScreen = ({ navigation }) => {
         <Text style={styles.totalLabel}>Total:</Text>
         <Text style={styles.totalAmount}>₹{item.total_amount}</Text>
       </View>
-    </View>
+      
+      <View style={styles.viewDetailsRow}>
+        <Text style={styles.viewDetailsText}>Tap to view details</Text>
+        <Ionicons name="chevron-forward" size={16} color="#FF6B35" />
+      </View>
+    </TouchableOpacity>
   );
 
   const getStatusColor = (status) => {
@@ -257,6 +268,20 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#FF6B35',
+  },
+  viewDetailsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+    marginTop: 8,
+  },
+  viewDetailsText: {
+    fontSize: 12,
+    color: '#FF6B35',
+    fontWeight: '500',
   },
   emptyOrders: {
     flex: 1,

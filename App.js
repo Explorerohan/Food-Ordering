@@ -17,6 +17,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import CartDetails from './src/screens/CartDetails';
 import OrderConfirmationScreen from './src/screens/OrderConfirmationScreen';
 import OrderHistoryScreen from './src/screens/OrderHistoryScreen';
+import OrderDetailScreen from './src/screens/OrderDetailScreen';
 import MapScreen from './src/screens/MapScreen';
 import CheckoutFormScreen from './src/screens/CheckoutFormScreen';
 
@@ -306,6 +307,7 @@ export default function App() {
             <Stack.Screen name="CartDetails" component={CartDetails} />
             <Stack.Screen name="OrderConfirmationScreen" component={OrderConfirmationScreen} />
             <Stack.Screen name="OrderHistoryScreen" component={OrderHistoryScreen} />
+            <Stack.Screen name="OrderDetail" component={OrderDetailScreen} />
             <Stack.Screen name="MapScreen" component={MapScreen} />
             <Stack.Screen name="CheckoutFormScreen" component={CheckoutFormScreen} />
           </>

@@ -33,7 +33,7 @@ const CategoryFilter = ({ categories, selectedCategory, onSelectCategory }) => {
             >
               {categoryObj.image && (
                 <Image
-                  source={{ uri: categoryObj.image.startsWith('http') ? categoryObj.image : `http://192.168.1.90:8000${categoryObj.image}` }}
+                  source={{ uri: categoryObj.image.startsWith('http') ? categoryObj.image : `http://192.168.254.5:8000${categoryObj.image}` }}
                   style={styles.categoryImage}
                   resizeMode="cover"
                 />

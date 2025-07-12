@@ -4,16 +4,17 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, SafeAreaVie
 const SignupScreen = ({ navigation, onSignup }) => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
   const handleSignup = async () => {
-    if (!username || !email || !password) {
+    if (!username || !email || !phoneNumber || !password) {
       setError('Please fill all fields.');
       return;
     }
     try {
-      await onSignup(username, email, password);
+      await onSignup(username, email, phoneNumber, password);
       navigation.navigate('Login');
     } catch (e) {
       setError('Signup failed. Try again.');
@@ -42,6 +43,14 @@ const SignupScreen = ({ navigation, onSignup }) => {
             onChangeText={setEmail}
             autoCapitalize="none"
             keyboardType="email-address"
+            placeholderTextColor="#aaa"
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Phone Number"
+            value={phoneNumber}
+            onChangeText={setPhoneNumber}
+            keyboardType="phone-pad"
             placeholderTextColor="#aaa"
           />
           <TextInput

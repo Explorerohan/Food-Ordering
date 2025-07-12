@@ -86,7 +86,7 @@ const CartDetails = ({ navigation, route }) => {
       }
       
       const response = await fetchWithAutoRefresh(async (accessToken) => {
-        return await fetch('http://192.168.1.90:8000/api/cart/', {
+        return await fetch('http://192.168.254.5:8000/api/cart/', {
           headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {},
         });
       });
@@ -138,7 +138,7 @@ const CartDetails = ({ navigation, route }) => {
     setProceeding(true);
     try {
       const response = await fetchWithAutoRefresh(async (accessToken) => {
-        return await fetch('http://192.168.1.90:8000/api/cart/checkout/', {
+        return await fetch('http://192.168.254.5:8000/api/cart/checkout/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -185,7 +185,7 @@ const CartDetails = ({ navigation, route }) => {
   const clearCart = async () => {
     try {
       const response = await fetchWithAutoRefresh(async (accessToken) => {
-        return await fetch('http://192.168.1.90:8000/api/cart/clear/', {
+        return await fetch('http://192.168.254.5:8000/api/cart/clear/', {
           method: 'DELETE',
           headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {},
         });
@@ -228,7 +228,7 @@ const CartDetails = ({ navigation, route }) => {
         <View style={styles.itemImageContainer}>
           {foodImage ? (
             <Image 
-                              source={{ uri: foodImage.startsWith('http') ? foodImage : `http://192.168.1.90:8000${foodImage}` }} 
+              source={{ uri: foodImage.startsWith('http') ? foodImage : `http://192.168.254.5:8000${foodImage}` }} 
               style={styles.itemImage} 
             />
           ) : (

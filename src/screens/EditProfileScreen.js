@@ -6,12 +6,13 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { profileApi } from '../services/api';
 
-const API_URL = 'http://192.168.1.90:8000/api/profile/';
+const API_URL = 'http://192.168.254.5:8000/api/profile/';
 
 const EditProfileScreen = ({ navigation, onProfileUpdate }) => {
   const [username, setUsername] = useState(''); 
   const [email, setEmail] = useState('');
   const [bio, setBio] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [profileImage, setProfileImage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -28,7 +29,7 @@ const EditProfileScreen = ({ navigation, onProfileUpdate }) => {
     try {
       const refresh = await AsyncStorage.getItem('refreshToken');
       if (!refresh) throw new Error('No refresh token found');
-              const response = await fetch('http://192.168.1.90:8000/api/token/refresh/', {
+              const response = await fetch('http://192.168.254.5:8000/api/token/refresh/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refresh }),
@@ -65,6 +66,7 @@ const EditProfileScreen = ({ navigation, onProfileUpdate }) => {
       setUsername(data.user?.username || '');
       setEmail(data.user?.email || '');
       setBio(data.bio || '');
+      setPhoneNumber(data.phone_number || '');
       setProfileImage(data.profile_picture || null);
       setProfileId(data.id);
     } catch (e) {
@@ -96,9 +98,9 @@ const EditProfileScreen = ({ navigation, onProfileUpdate }) => {
     setSubmitting(true);
     try {
       const token = await AsyncStorage.getItem('accessToken');
-      console.log('Submitting profile update with data:', { username, email, bio, profileImage });
+      console.log('Submitting profile update with data:', { username, email, bio, profileImage, phoneNumber });
       console.log('Token:', token ? 'Present' : 'Missing');
-      await profileApi.updateProfile({ username, email, bio, profileImage }, token);
+      await profileApi.updateProfile({ username, email, bio, profileImage, phoneNumber }, token);
       
       // Update AsyncStorage with new values immediately
       const userId = await AsyncStorage.getItem('userId');
@@ -106,6 +108,7 @@ const EditProfileScreen = ({ navigation, onProfileUpdate }) => {
         await AsyncStorage.setItem(`username_${userId}`, username);
         await AsyncStorage.setItem(`email_${userId}`, email);
         await AsyncStorage.setItem(`bio_${userId}`, bio || '');
+        await AsyncStorage.setItem(`phoneNumber_${userId}`, phoneNumber || '');
         if (profileImage) {
           await AsyncStorage.setItem(`profilePicture_${userId}`, profileImage);
         }
@@ -169,6 +172,13 @@ const EditProfileScreen = ({ navigation, onProfileUpdate }) => {
           value={bio}
           onChangeText={setBio}
           multiline
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Phone Number"
+          value={phoneNumber}
+          onChangeText={setPhoneNumber}
+          keyboardType="phone-pad"
         />
         <TouchableOpacity style={styles.saveButton} onPress={handleSubmit} disabled={submitting}>
           <Text style={styles.saveButtonText}>{submitting ? 'Saving...' : 'Save Changes'}</Text>

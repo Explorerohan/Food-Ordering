@@ -153,7 +153,7 @@ export default function App() {
       }
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 7000); // 7 seconds
-      const res = await fetch('http://192.168.1.90:8000/api/profile/me/', {
+      const res = await fetch('http://192.168.254.5:8000/api/profile/me/', {
         headers: { 'Authorization': `Bearer ${token}` },
         signal: controller.signal,
       });
@@ -240,8 +240,8 @@ export default function App() {
     }
   };
 
-  const handleSignup = async (username, emailInput, password, navigation) => {
-    await authApi.signup(username, emailInput, password);
+  const handleSignup = async (username, emailInput, phoneNumber, password, navigation) => {
+    await authApi.signup(username, emailInput, phoneNumber, password);
     await handleLogin(username, password, navigation);
   };
 

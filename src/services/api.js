@@ -2,7 +2,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Base API configuration
-const API_BASE_URL = 'http://192.168.1.90:8000';
+const API_BASE_URL = 'http://192.168.254.5:8000';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -104,9 +104,9 @@ export const authApi = {
       throw error;
     }
   },
-  signup: async (username, email, password) => {
+  signup: async (username, email, phoneNumber, password) => {
     try {
-      const response = await api.post('/api/register/', { username, email, password });
+      const response = await api.post('/api/register/', { username, email, phone_number: phoneNumber, password });
       return response.data;
     } catch (error) {
       console.error('Signup error:', error);
@@ -139,14 +139,15 @@ export const profileApi = {
       throw error;
     }
   },
-  updateProfile: async ({ username, email, bio, profileImage }) => {
+  updateProfile: async ({ username, email, bio, profileImage, phoneNumber }) => {
     try {
       return await apiCallWithAutoRefresh(async (accessToken) => {
-        console.log('API: Updating profile with data:', { username, email, bio });
+        console.log('API: Updating profile with data:', { username, email, bio, phoneNumber });
         const formData = new FormData();
         formData.append('bio', bio);
         formData.append('user[username]', username);
         formData.append('user[email]', email);
+        formData.append('phone_number', phoneNumber);
         if (profileImage && profileImage.startsWith('file')) {
           formData.append('profile_picture', {
             uri: profileImage,

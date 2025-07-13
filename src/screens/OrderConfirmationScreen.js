@@ -9,7 +9,7 @@ const refreshAccessToken = async () => {
   const refreshToken = await AsyncStorage.getItem('refreshToken');
   if (!refreshToken) return null;
   try {
-    const response = await fetch('http://192.168.254.5:8000/api/token/refresh/', {
+    const response = await fetch('http://192.168.1.90:8000/api/token/refresh/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh: refreshToken }),
@@ -54,7 +54,7 @@ const OrderConfirmationScreen = () => {
         setTotalAmount(0);
         return;
       }
-      let response = await fetch('http://192.168.254.5:8000/api/cart/', {
+      let response = await fetch('http://192.168.1.90:8000/api/cart/', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -64,7 +64,7 @@ const OrderConfirmationScreen = () => {
       if (data.code === 'token_not_valid') {
         token = await refreshAccessToken();
         if (token) {
-          response = await fetch('http://192.168.254.5:8000/api/cart/', {
+          response = await fetch('http://192.168.1.90:8000/api/cart/', {
             headers: {
               'Authorization': `Bearer ${token}`,
             },
@@ -118,7 +118,7 @@ const OrderConfirmationScreen = () => {
       };
 
       let token = await AsyncStorage.getItem('accessToken');
-      let response = await fetch('http://192.168.254.5:8000/api/orders/', {
+      let response = await fetch('http://192.168.1.90:8000/api/orders/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -131,7 +131,7 @@ const OrderConfirmationScreen = () => {
       if (response.status === 401) {
         token = await refreshAccessToken();
         if (token) {
-          response = await fetch('http://192.168.254.5:8000/api/orders/', {
+          response = await fetch('http://192.168.1.90:8000/api/orders/', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -150,7 +150,7 @@ const OrderConfirmationScreen = () => {
         // Clear the cart after successful order
         try {
           const clearToken = token || await AsyncStorage.getItem('accessToken');
-          await fetch('http://192.168.254.5:8000/api/cart/clear/', {
+          await fetch('http://192.168.1.90:8000/api/cart/clear/', {
             method: 'DELETE',
             headers: {
               'Authorization': `Bearer ${clearToken}`,

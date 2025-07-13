@@ -153,7 +153,7 @@ export default function App() {
       }
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 7000); // 7 seconds
-      const res = await fetch('http://192.168.254.5:8000/api/profile/me/', {
+      const res = await fetch('http://192.168.1.90:8000/api/profile/me/', {
         headers: { 'Authorization': `Bearer ${token}` },
         signal: controller.signal,
       });
@@ -241,8 +241,32 @@ export default function App() {
   };
 
   const handleSignup = async (username, emailInput, phoneNumber, password, navigation) => {
-    await authApi.signup(username, emailInput, phoneNumber, password);
-    await handleLogin(username, password, navigation);
+    try {
+      await authApi.signup(username, emailInput, phoneNumber, password);
+      // Show success message and redirect to login
+      Alert.alert(
+        'Account Created Successfully!', 
+        'Your account has been created. Please login with your credentials.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              // Navigate to login screen
+              if (navigation && navigation.reset) {
+                navigation.reset({
+                  index: 0,
+                  routes: [{ name: 'Login' }],
+                });
+              } else if (navigation && navigation.navigate) {
+                navigation.navigate('Login');
+              }
+            }
+          }
+        ]
+      );
+    } catch (error) {
+      Alert.alert('Signup Failed', 'Failed to create account. Please try again.');
+    }
   };
 
   const handleLogout = async (navigation) => {

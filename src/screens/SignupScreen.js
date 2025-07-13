@@ -15,7 +15,7 @@ const SignupScreen = ({ navigation, onSignup }) => {
     }
     try {
       await onSignup(username, email, phoneNumber, password);
-      navigation.navigate('Login');
+      // Navigation is now handled in App.js after successful signup
     } catch (e) {
       setError('Signup failed. Try again.');
     }

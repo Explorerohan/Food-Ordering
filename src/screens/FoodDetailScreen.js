@@ -111,10 +111,11 @@ const FoodDetailScreen = () => {
       };
       
       console.log('Cart API request body:', requestBody);
-              console.log('Cart API endpoint:', 'http://192.168.1.90:8000/api/cart/');
+      console.log('Cart API endpoint:', 'http://192.168.1.90:8000/api/cart/');
       console.log('Item ID:', item.id);
       console.log('Item name:', item.name);
       console.log('Selected size:', selectedSize);
+      console.log('Selected spice level:', selectedSpice);
       console.log('Quantity:', quantity);
       
       const cartData = await apiCallWithAutoRefresh(async (accessToken) => {

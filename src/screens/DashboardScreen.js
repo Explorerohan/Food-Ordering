@@ -134,6 +134,7 @@ const DashboardScreen = ({ username }) => {
         data.forEach(item => {
           if (item.category && item.category.name) {
             categoryMap[item.category.name] = item.category.image || null;
+            
           } else if (item.category && typeof item.category === 'string') {
             categoryMap[item.category] = null;
           }

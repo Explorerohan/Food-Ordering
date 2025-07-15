@@ -1,5 +1,5 @@
 import 'react-native-get-random-values';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -20,6 +20,8 @@ import OrderHistoryScreen from './src/screens/OrderHistoryScreen';
 import OrderDetailScreen from './src/screens/OrderDetailScreen';
 import MapScreen from './src/screens/MapScreen';
 import CheckoutFormScreen from './src/screens/CheckoutFormScreen';
+import { AuthProvider, AuthContext } from './src/context/AuthContext';
+import ChatScreen from './src/screens/ChatScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -80,6 +82,7 @@ function ProfileScreen({ username, email, profilePicture, bio, onLogout, navigat
         <MenuItem icon="gift-outline" label="My Promocodes" onPress={() => {}} />
         <MenuItem icon="heart-outline" label="My Orders" onPress={() => navigation.navigate('MyOrders')} />
         <MenuItem icon="map-outline" label="Track your order" onPress={() => {}} />
+        <MenuItem icon="chatbubble-ellipses-outline" label="24 hrs Support" onPress={() => navigation.navigate('ChatScreen')} color="#2196F3" />
         <MenuItem icon="log-out-outline" label="Sign Out" onPress={() => onLogout(navigation)} color="#FF6B35" />
       </View>
     </View>
@@ -89,12 +92,6 @@ function ProfileScreen({ username, email, profilePicture, bio, onLogout, navigat
 const MyOrdersScreen = () => (
   <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
     <Text>My Orders Screen</Text>
-  </View>
-);
-
-const ChatScreen = () => (
-  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-    <Text>Chat Screen</Text>
   </View>
 );
 
@@ -109,7 +106,6 @@ function MainTabs({ username, email, profilePicture, bio, onLogout, navigation, 
           else if (route.name === 'Profile') iconName = 'person-outline';
           else if (route.name === 'Cart') iconName = 'cart-outline';
           else if (route.name === 'MyOrders') iconName = 'bag-outline';
-          else if (route.name === 'Chat') iconName = 'chatbubble-ellipses-outline';
           return <Ionicons name={iconName} size={size} color={color} />;
         },
       })}
@@ -119,7 +115,6 @@ function MainTabs({ username, email, profilePicture, bio, onLogout, navigation, 
       </Tab.Screen>
       <Tab.Screen name="MyOrders" component={OrderHistoryScreen} options={{ title: 'My Orders' }} />
       <Tab.Screen name="Cart" component={CartDetails} />
-      <Tab.Screen name="Chat" component={ChatScreen} />
       <Tab.Screen name="Profile">
         {props => <ProfileScreen {...props} username={username} email={email} profilePicture={profilePicture} bio={bio} onLogout={(nav) => onLogout(nav || props.navigation)} navigation={props.navigation} onRefreshProfile={onRefreshProfile} />}
       </Tab.Screen>
@@ -145,6 +140,7 @@ export default function App() {
   const [profilePicture, setProfilePicture] = useState(null);
   const [bio, setBio] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const auth = useRef();
 
   const fetchAndStoreProfileDetails = async (token) => {
     try {
@@ -224,7 +220,18 @@ export default function App() {
       const refresh = res.refresh;
       await AsyncStorage.setItem('accessToken', token);
       await AsyncStorage.setItem('refreshToken', refresh);
-      await fetchAndStoreProfileDetails(token);
+      // Fetch user profile
+      const profileRes = await fetch('http://192.168.1.90:8000/api/profile/me/', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      const data = await profileRes.json();
+      const userData = {
+        id: data.user?.id,
+        username: data.user?.username,
+        is_admin: data.user?.is_admin || false,
+      };
+      // Save user in AuthContext
+      auth.current.login(userData, token);
       setIsAuthenticated(true);
       if (navigation && navigation.reset) {
         navigation.reset({
@@ -307,37 +314,47 @@ export default function App() {
   }
 
   return (
-    <NavigationContainer>
-      <StatusBar style="auto" />
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {!isAuthenticated ? (
-          <>
-            <Stack.Screen name="Login" >
-              {props => <LoginScreen {...props} onLogin={(...args) => handleLogin(...args, props.navigation)} />}
-            </Stack.Screen>
-            <Stack.Screen name="Signup">
-              {props => <SignupScreen {...props} onSignup={(...args) => handleSignup(...args, props.navigation)} />}
-            </Stack.Screen>
-          </>
-        ) : (
-          <>
-            <Stack.Screen name="MainTabs">
-              {props => <MainTabs {...props} username={username} email={email} profilePicture={profilePicture} bio={bio} onLogout={(nav) => handleLogout(nav || props.navigation)} navigation={props.navigation} onRefreshProfile={fetchAndStoreProfileDetails} />}
-            </Stack.Screen>
-            <Stack.Screen name="FoodDetailScreen" component={FoodDetailScreen} />
-            <Stack.Screen name="EditProfile">
-              {props => <EditProfileScreen {...props} onProfileUpdate={fetchAndStoreProfileDetails} />}
-            </Stack.Screen>
-            <Stack.Screen name="CartDetails" component={CartDetails} />
-            <Stack.Screen name="OrderConfirmationScreen" component={OrderConfirmationScreen} />
-            <Stack.Screen name="OrderHistoryScreen" component={OrderHistoryScreen} />
-            <Stack.Screen name="OrderDetail" component={OrderDetailScreen} />
-            <Stack.Screen name="MapScreen" component={MapScreen} />
-            <Stack.Screen name="CheckoutFormScreen" component={CheckoutFormScreen} />
-          </>
-        )}
-      </Stack.Navigator>
-    </NavigationContainer>
+    <AuthProvider>
+      <AuthContext.Consumer>
+        {context => {
+          auth.current = context;
+          return (
+            <NavigationContainer>
+              <StatusBar style="auto" />
+              <Stack.Navigator screenOptions={{ headerShown: false }}>
+                {!isAuthenticated ? (
+                  <>
+                    <Stack.Screen name="Login" >
+                      {props => <LoginScreen {...props} onLogin={(...args) => handleLogin(...args, props.navigation)} />}
+                    </Stack.Screen>
+                    <Stack.Screen name="Signup">
+                      {props => <SignupScreen {...props} onSignup={(...args) => handleSignup(...args, props.navigation)} />}
+                    </Stack.Screen>
+                  </>
+                ) : (
+                  <>
+                    <Stack.Screen name="MainTabs" options={{ headerShown: false }}>
+                      {props => <MainTabs {...props} username={username} email={email} profilePicture={profilePicture} bio={bio} onLogout={handleLogout} navigation={props.navigation} onRefreshProfile={fetchAndStoreProfileDetails} />}
+                    </Stack.Screen>
+                    <Stack.Screen name="FoodDetailScreen" component={FoodDetailScreen} />
+                    <Stack.Screen name="EditProfile">
+                      {props => <EditProfileScreen {...props} onProfileUpdate={fetchAndStoreProfileDetails} />}
+                    </Stack.Screen>
+                    <Stack.Screen name="CartDetails" component={CartDetails} />
+                    <Stack.Screen name="OrderConfirmationScreen" component={OrderConfirmationScreen} />
+                    <Stack.Screen name="OrderHistoryScreen" component={OrderHistoryScreen} />
+                    <Stack.Screen name="OrderDetail" component={OrderDetailScreen} />
+                    <Stack.Screen name="MapScreen" component={MapScreen} />
+                    <Stack.Screen name="CheckoutFormScreen" component={CheckoutFormScreen} />
+                    <Stack.Screen name="ChatScreen" component={ChatScreen} options={{ title: 'Live Chat' }} />
+                  </>
+                )}
+              </Stack.Navigator>
+            </NavigationContainer>
+          );
+        }}
+      </AuthContext.Consumer>
+    </AuthProvider>
   );
 }
 

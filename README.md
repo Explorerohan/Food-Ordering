@@ -16,7 +16,7 @@ A React Native food ordering application built with Expo SDK 52 that displays a 
 
 The app is configured to fetch food items from your API endpoint:
 ```
-http://192.168.1.90:8000/foods/
+http://192.168.254.6:8000/foods/
 ```
 
 ### Expected API Response Format
@@ -116,7 +116,7 @@ The app uses a modern design with:
 ### Common Issues
 
 1. **API Connection Failed**
-   - Ensure your API server is running on `http://192.168.1.90:8000`
+   - Ensure your API server is running on `http://192.168.254.6:8000`
    - Check if the device/emulator can access the IP address
    - Verify the `/foods/` endpoint returns the expected data format
 

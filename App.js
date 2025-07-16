@@ -22,6 +22,7 @@ import MapScreen from './src/screens/MapScreen';
 import CheckoutFormScreen from './src/screens/CheckoutFormScreen';
 import { AuthProvider, AuthContext } from './src/context/AuthContext';
 import ChatScreen from './src/screens/ChatScreen';
+import ProfileScreen from './src/screens/ProfileScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -30,83 +31,33 @@ LogBox.ignoreLogs([
   "The action 'RESET' with payload",
 ]);
 
-function ProfileScreen({ username, email, profilePicture, bio, onLogout, navigation, onRefreshProfile }) {
-  useFocusEffect(
-    React.useCallback(() => {
-      const refreshProfile = async () => {
-        const token = await AsyncStorage.getItem('accessToken');
-        if (token && onRefreshProfile) {
-          await onRefreshProfile(token);
-        }
-      };
-      refreshProfile();
-    }, [onRefreshProfile])
-  );
-  return (
-    <View style={{ flex: 1, backgroundColor: '#fff' }}>
-      {/* StatusBar for ProfileScreen */}
-      <StatusBar style="light" />
-      {/* Header Section */}
-      <View style={{ backgroundColor: '#FF9800', paddingBottom: 24, paddingTop: 40 + (StatusBar.currentHeight || 0), paddingHorizontal: 20, borderBottomLeftRadius: 18, borderBottomRightRadius: 18, elevation: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowOffset: { width: 0, height: 2 }, shadowRadius: 4 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 24 }}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 2, marginLeft: -12 }}>
-            <Ionicons name="arrow-back" size={28} color="#fff" />
-      </TouchableOpacity>
-          <Text style={{ color: '#fff', fontSize: 26, fontWeight: 'bold', letterSpacing: 0.2, marginLeft: 8 }}>
-            My Profile
-          </Text>
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        {profilePicture ? (
-            <Image source={{ uri: profilePicture }} style={{ width: 84, height: 84, borderRadius: 42, borderWidth: 2, borderColor: '#fff', marginRight: 18, backgroundColor: '#fff' }} />
-        ) : (
-            <Ionicons name="person-circle-outline" size={84} color="#fff" style={{ marginRight: 18 }} />
-        )}
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold', letterSpacing: 0.1 }}>{username}</Text>
-            {email ? (
-              <Text style={{ color: '#ffe0b2', fontSize: 14, marginTop: 2 }} numberOfLines={1}>{email}</Text>
-            ) : null}
-            {bio ? (
-              <Text style={{ color: '#ffe0b2', fontSize: 13, marginTop: 2 }} numberOfLines={2}>{bio}</Text>
-            ) : null}
-          </View>
-          <TouchableOpacity onPress={() => navigation.navigate('EditProfile')} style={{ marginLeft: 8, padding: 6, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.15)' }}>
-            <Ionicons name="pencil" size={22} color="#fff" />
-          </TouchableOpacity>
-        </View>
-      </View>
-      {/* Menu section */}
-      <View style={{ backgroundColor: '#fff', flex: 1, marginTop: 8, borderTopLeftRadius: 18, borderTopRightRadius: 18, overflow: 'hidden' }}>
-        <MenuItem icon="card-outline" label="Payment Method" onPress={() => {}} />
-        <MenuItem icon="gift-outline" label="My Promocodes" onPress={() => {}} />
-        <MenuItem icon="heart-outline" label="My Orders" onPress={() => navigation.navigate('MyOrders')} />
-        <MenuItem icon="map-outline" label="Track your order" onPress={() => {}} />
-        <MenuItem icon="chatbubble-ellipses-outline" label="24 hrs Support" onPress={() => navigation.navigate('ChatScreen')} color="#2196F3" />
-        <MenuItem icon="log-out-outline" label="Sign Out" onPress={() => onLogout(navigation)} color="#FF6B35" />
-      </View>
-    </View>
-  );
-}
-
-const MyOrdersScreen = () => (
-  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-    <Text>My Orders Screen</Text>
-  </View>
-);
-
-function MainTabs({ username, email, profilePicture, bio, onLogout, navigation, onRefreshProfile }) {
+function MainTabs({ username, email, phoneNumber, profilePicture, bio, onLogout, navigation, onRefreshProfile }) {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarIcon: ({ color, size, focused }) => {
+        tabBarIcon: ({ color, size }) => {
           let iconName;
           if (route.name === 'Home') iconName = 'home-outline';
           else if (route.name === 'Profile') iconName = 'person-outline';
           else if (route.name === 'Cart') iconName = 'cart-outline';
           else if (route.name === 'MyOrders') iconName = 'bag-outline';
           return <Ionicons name={iconName} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: '#FF9800',
+        tabBarInactiveTintColor: '#888',
+        tabBarStyle: {
+          backgroundColor: '#fff',
+          borderTopWidth: 1,
+          borderTopColor: '#eee',
+          height: 60,
+          paddingBottom: 6,
+          paddingTop: 6,
+        },
+        tabBarLabelStyle: {
+          fontSize: 13,
+          fontWeight: '600',
+          letterSpacing: 0.1,
         },
       })}
     >
@@ -116,7 +67,7 @@ function MainTabs({ username, email, profilePicture, bio, onLogout, navigation, 
       <Tab.Screen name="MyOrders" component={OrderHistoryScreen} options={{ title: 'My Orders' }} />
       <Tab.Screen name="Cart" component={CartDetails} />
       <Tab.Screen name="Profile">
-        {props => <ProfileScreen {...props} username={username} email={email} profilePicture={profilePicture} bio={bio} onLogout={(nav) => onLogout(nav || props.navigation)} navigation={props.navigation} onRefreshProfile={onRefreshProfile} />}
+        {props => <ProfileScreen {...props} username={username} email={email} phoneNumber={phoneNumber} profilePicture={profilePicture} bio={bio} onLogout={(nav) => onLogout(nav || props.navigation)} navigation={props.navigation} onRefreshProfile={onRefreshProfile} />}
       </Tab.Screen>
     </Tab.Navigator>
   );
@@ -140,6 +91,7 @@ export default function App() {
   const [profilePicture, setProfilePicture] = useState(null);
   const [bio, setBio] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [phoneNumber, setPhoneNumber] = useState('');
   const auth = useRef();
 
   const fetchAndStoreProfileDetails = async (token) => {
@@ -149,7 +101,7 @@ export default function App() {
       }
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 7000); // 7 seconds
-      const res = await fetch('http://192.168.1.90:8000/api/profile/me/', {
+      const res = await fetch('http://192.168.254.6:8000/api/profile/me/', {
         headers: { 'Authorization': `Bearer ${token}` },
         signal: controller.signal,
       });
@@ -177,6 +129,8 @@ export default function App() {
         }
         setBio(data.bio || '');
         await AsyncStorage.setItem(`bio_${id}`, data.bio || '');
+        setPhoneNumber(data.phone_number || '');
+        await AsyncStorage.setItem(`phoneNumber_${id}`, data.phone_number || '');
       }
     } catch (e) {
       console.log('Failed to fetch/store profile details:', e);
@@ -199,6 +153,7 @@ export default function App() {
             setProfilePicture(null);
             setUserId(null);
             setBio('');
+            setPhoneNumber('');
             await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'userId']);
           }
         } else {
@@ -221,7 +176,7 @@ export default function App() {
       await AsyncStorage.setItem('accessToken', token);
       await AsyncStorage.setItem('refreshToken', refresh);
       // Fetch user profile
-      const profileRes = await fetch('http://192.168.1.90:8000/api/profile/me/', {
+      const profileRes = await fetch('http://192.168.254.6:8000/api/profile/me/', {
         headers: { 'Authorization': `Bearer ${token}` },
       });
       const data = await profileRes.json();
@@ -286,7 +241,8 @@ export default function App() {
         key === 'userId' ||
         key === 'authToken' ||
         key === 'accessToken' ||
-        key === 'refreshToken'
+        key === 'refreshToken' ||
+        key.startsWith('phoneNumber_')
     );
     await AsyncStorage.multiRemove(userKeys);
     setIsAuthenticated(false);
@@ -295,6 +251,7 @@ export default function App() {
     setProfilePicture(null);
     setUserId(null);
     setBio('');
+    setPhoneNumber('');
     if (navigation && navigation.reset) {
       navigation.reset({
         index: 0,
@@ -334,7 +291,7 @@ export default function App() {
                 ) : (
                   <>
                     <Stack.Screen name="MainTabs" options={{ headerShown: false }}>
-                      {props => <MainTabs {...props} username={username} email={email} profilePicture={profilePicture} bio={bio} onLogout={handleLogout} navigation={props.navigation} onRefreshProfile={fetchAndStoreProfileDetails} />}
+                      {props => <MainTabs {...props} username={username} email={email} phoneNumber={phoneNumber} profilePicture={profilePicture} bio={bio} onLogout={handleLogout} navigation={props.navigation} onRefreshProfile={fetchAndStoreProfileDetails} />}
                     </Stack.Screen>
                     <Stack.Screen name="FoodDetailScreen" component={FoodDetailScreen} />
                     <Stack.Screen name="EditProfile">

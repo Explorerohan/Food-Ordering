@@ -6,7 +6,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { profileApi } from '../services/api';
 
-const API_URL = 'http://192.168.1.90:8000/api/profile/';
+const API_URL = 'http://192.168.254.6:8000/api/profile/';
 
 const EditProfileScreen = ({ navigation, onProfileUpdate }) => {
   const [username, setUsername] = useState(''); 
@@ -29,7 +29,7 @@ const EditProfileScreen = ({ navigation, onProfileUpdate }) => {
     try {
       const refresh = await AsyncStorage.getItem('refreshToken');
       if (!refresh) throw new Error('No refresh token found');
-              const response = await fetch('http://192.168.1.90:8000/api/token/refresh/', {
+              const response = await fetch('http://192.168.254.6:8000/api/token/refresh/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refresh }),

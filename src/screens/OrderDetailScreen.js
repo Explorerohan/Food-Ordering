@@ -18,7 +18,7 @@ const OrderDetailScreen = ({ route, navigation }) => {
     try {
       setLoading(true);
       const response = await fetchWithAutoRefresh(async (accessToken) => {
-        return await fetch(`http://192.168.1.90:8000/api/orders/${orderId}/`, {
+        return await fetch(`http://192.168.254.6:8000/api/orders/${orderId}/`, {
           headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {},
         });
       });

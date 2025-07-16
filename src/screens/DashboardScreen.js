@@ -17,7 +17,7 @@ import {
   Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView as SafeAreaViewContext } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
@@ -26,7 +26,7 @@ import FoodItemCard from '../components/FoodItemCard';
 import CategoryFilter from '../components/CategoryFilter';
 import { foodApi, mockFoodData, profileApi } from '../services/api';
 
-const API_BASE_URL = 'http://192.168.1.90:8000';
+const API_BASE_URL = 'http://192.168.254.6:8000';
 
 const DashboardScreen = ({ username }) => {
   const navigation = useNavigation();
@@ -39,6 +39,7 @@ const DashboardScreen = ({ username }) => {
   const [profileImage, setProfileImage] = useState(null);
   const [displayedIndex, setDisplayedIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [userName, setUserName] = useState('');
   const slideAnim = React.useRef(new Animated.Value(0)).current;
 
   const staticAddress = 'Itahari-halgada';
@@ -92,20 +93,25 @@ const DashboardScreen = ({ username }) => {
     console.log('Categories state updated:', categories);
   }, [categories]);
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const profile = await profileApi.getProfile();
-        if (profile && profile.profile_picture) {
-          setProfileImage(profile.profile_picture);
+  useFocusEffect(
+    React.useCallback(() => {
+      const fetchProfile = async () => {
+        try {
+          const profile = await profileApi.getProfile();
+          if (profile && profile.profile_picture) {
+            setProfileImage(profile.profile_picture);
+          }
+          if (profile && profile.user && profile.user.username) {
+            setUserName(profile.user.username);
+          }
+        } catch (error) {
+          setProfileImage('https://randomuser.me/api/portraits/men/32.jpg');
+          setUserName('User');
         }
-      } catch (error) {
-        // fallback to static image if needed
-        setProfileImage('https://randomuser.me/api/portraits/men/32.jpg');
-      }
-    };
-    fetchProfile();
-  }, []);
+      };
+      fetchProfile();
+    }, [])
+  );
 
   const fetchFoodItems = async () => {
     try {
@@ -236,7 +242,7 @@ const DashboardScreen = ({ username }) => {
       }
       const spice_level = 'Mild';
       const accessToken = await AsyncStorage.getItem('accessToken');
-      const response = await fetch('http://192.168.1.90:8000/api/cart/', {
+      const response = await fetch('http://192.168.254.6:8000/api/cart/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -282,7 +288,7 @@ const DashboardScreen = ({ username }) => {
           <Image source={{ uri: profileImage || 'https://randomuser.me/api/portraits/men/32.jpg' }} style={styles.profileImage} />
         </TouchableOpacity>
       </View>
-      <Text style={styles.greetingHello}><Text style={styles.greetingHelloBold}>Hello Rohan!</Text> <Text style={styles.greetingWave}>👋</Text></Text>
+      <Text style={styles.greetingHello}><Text style={styles.greetingHelloBold}>Hello {userName || 'User'}!</Text> <Text style={styles.greetingWave}>👋</Text></Text>
       <Text style={styles.greetingTitle}>What would you like to order?</Text>
       <View style={styles.searchRow}>
         <View style={styles.searchBox}>

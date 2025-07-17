@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ActivityIndicator, Alert, SafeAreaView, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ActivityIndicator, Alert, ScrollView } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { profileApi } from '../services/api';
+import { SafeAreaView as SafeAreaViewContext } from 'react-native-safe-area-context';
 
-const API_URL = 'http://192.168.254.6:8000/api/profile/';
+const API_URL = 'http://192.168.1.90:8000/api/profile/';
 
 const EditProfileScreen = ({ navigation, onProfileUpdate }) => {
   const [username, setUsername] = useState(''); 
@@ -29,7 +30,7 @@ const EditProfileScreen = ({ navigation, onProfileUpdate }) => {
     try {
       const refresh = await AsyncStorage.getItem('refreshToken');
       if (!refresh) throw new Error('No refresh token found');
-              const response = await fetch('http://192.168.254.6:8000/api/token/refresh/', {
+              const response = await fetch('http://192.168.1.90:8000/api/token/refresh/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refresh }),
@@ -138,7 +139,7 @@ const EditProfileScreen = ({ navigation, onProfileUpdate }) => {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+    <SafeAreaViewContext style={{ flex: 1, backgroundColor: '#fff' }} edges={["top","left","right"]}>
       <TouchableOpacity style={styles.backArrow} onPress={() => navigation.goBack()}>
         <Ionicons name="arrow-back" size={28} color="#333" />
       </TouchableOpacity>
@@ -184,7 +185,7 @@ const EditProfileScreen = ({ navigation, onProfileUpdate }) => {
           <Text style={styles.saveButtonText}>{submitting ? 'Saving...' : 'Save Changes'}</Text>
         </TouchableOpacity>
       </ScrollView>
-    </SafeAreaView>
+    </SafeAreaViewContext>
   );
 };
 

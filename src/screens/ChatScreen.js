@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView as SafeAreaViewContext } from 'react-native-safe-area-context';
 
-const BACKEND_URL = 'http://192.168.254.6:8000'; // Replace with your backend URL
+const BACKEND_URL = 'http://192.168.1.90:8000'; // Replace with your backend URL
 
 const ChatScreen = () => {
   const { user, token, loading } = useContext(AuthContext); // user: { id, username, is_admin }
@@ -71,7 +71,7 @@ const ChatScreen = () => {
       console.log('No token available for WebSocket connection');
       return;
     }
-    ws.current = new WebSocket(`ws://192.168.254.6:8000/ws/chat/${roomName}/?token=${token}`);
+    ws.current = new WebSocket(`ws://192.168.1.90:8000/ws/chat/${roomName}/?token=${token}`);
     ws.current.onopen = () => { console.log('WebSocket opened'); };
     ws.current.onmessage = (e) => {
       const data = JSON.parse(e.data);

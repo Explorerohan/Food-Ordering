@@ -23,6 +23,7 @@ import CheckoutFormScreen from './src/screens/CheckoutFormScreen';
 import { AuthProvider, AuthContext } from './src/context/AuthContext';
 import ChatScreen from './src/screens/ChatScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
+import SystemNavigationBar from 'react-native-system-navigation-bar';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -101,7 +102,7 @@ export default function App() {
       }
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 7000); // 7 seconds
-      const res = await fetch('http://192.168.254.6:8000/api/profile/me/', {
+      const res = await fetch('http://192.168.1.90:8000/api/profile/me/', {
         headers: { 'Authorization': `Bearer ${token}` },
         signal: controller.signal,
       });
@@ -168,6 +169,10 @@ export default function App() {
     checkAuthStatus();
   }, []);
 
+  useEffect(() => {
+    SystemNavigationBar.setNavigationColor('transparent');
+  }, []);
+
   const handleLogin = async (usernameInput, password, navigation) => {
     try {
       const res = await authApi.login(usernameInput, password);
@@ -176,7 +181,7 @@ export default function App() {
       await AsyncStorage.setItem('accessToken', token);
       await AsyncStorage.setItem('refreshToken', refresh);
       // Fetch user profile
-      const profileRes = await fetch('http://192.168.254.6:8000/api/profile/me/', {
+      const profileRes = await fetch('http://192.168.1.90:8000/api/profile/me/', {
         headers: { 'Authorization': `Bearer ${token}` },
       });
       const data = await profileRes.json();

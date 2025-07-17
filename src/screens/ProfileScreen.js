@@ -1,25 +1,56 @@
-import React from 'react';
-import { View, Text, Image, TouchableOpacity, StatusBar, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, Image, TouchableOpacity, StatusBar, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import { profileApi } from '../services/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SafeAreaView as SafeAreaViewContext } from 'react-native-safe-area-context';
 
-function ProfileScreen({ username, email, phoneNumber, profilePicture, bio, onLogout, navigation, onRefreshProfile }) {
+function ProfileScreen({ navigation }) {
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [profilePicture, setProfilePicture] = useState(null);
+  const [bio, setBio] = useState('');
+  const [loading, setLoading] = useState(true);
+
   useFocusEffect(
     React.useCallback(() => {
-      if (onRefreshProfile) {
-        onRefreshProfile();
-      }
-    }, [onRefreshProfile])
+      const fetchProfile = async () => {
+        setLoading(true);
+        try {
+          let data = await profileApi.getProfile();
+          setUsername(data.user?.username || '');
+          setEmail(data.user?.email || '');
+          setPhoneNumber(data.phone_number || '');
+          setProfilePicture(data.profile_picture || null);
+          setBio(data.bio || '');
+        } catch (e) {
+          Alert.alert('Error', 'Failed to load profile.');
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchProfile();
+    }, [])
   );
 
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#FF6B35" />
+      </View>
+    );
+  }
+
   return (
-    <View style={{ flex: 1, backgroundColor: '#fff' }}>
-      <StatusBar style="light" />
+    <SafeAreaViewContext style={{ flex: 1, backgroundColor: '#fff' }} edges={["top","left","right"]}>
+      <StatusBar style="dark" />
       {/* Header Section */}
       <View style={styles.header}>
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={28} color="#fff" />
+            <Ionicons name="arrow-back" size={28} color="#222" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>My Profile</Text>
         </View>
@@ -27,7 +58,7 @@ function ProfileScreen({ username, email, phoneNumber, profilePicture, bio, onLo
           {profilePicture ? (
             <Image source={{ uri: profilePicture }} style={styles.profileImage} />
           ) : (
-            <Ionicons name="person-circle-outline" size={84} color="#fff" style={{ marginRight: 18 }} />
+            <Ionicons name="person-circle-outline" size={84} color="#bbb" style={{ marginRight: 18 }} />
           )}
           <View style={{ flex: 1 }}>
             <Text style={styles.username}>{username}</Text>
@@ -36,7 +67,7 @@ function ProfileScreen({ username, email, phoneNumber, profilePicture, bio, onLo
             {bio ? <Text style={styles.bio}>{bio}</Text> : null}
           </View>
           <TouchableOpacity onPress={() => navigation.navigate('EditProfile')} style={styles.editBtn}>
-            <Ionicons name="pencil" size={22} color="#fff" />
+            <Ionicons name="pencil" size={22} color="#222" />
           </TouchableOpacity>
         </View>
       </View>
@@ -47,9 +78,9 @@ function ProfileScreen({ username, email, phoneNumber, profilePicture, bio, onLo
         <MenuItem icon="heart-outline" label="My Orders" onPress={() => navigation.navigate('MyOrders')} />
         <MenuItem icon="map-outline" label="Track your order" onPress={() => {}} />
         <MenuItem icon="chatbubble-ellipses-outline" label="24 hrs Support" onPress={() => navigation.navigate('ChatScreen')} color="#2196F3" />
-        <MenuItem icon="log-out-outline" label="Sign Out" onPress={() => onLogout(navigation)} color="#FF6B35" />
+        <MenuItem icon="log-out-outline" label="Sign Out" onPress={() => navigation.reset({ index: 0, routes: [{ name: 'Login' }] })} color="#FF6B35" />
       </View>
-    </View>
+    </SafeAreaViewContext>
   );
 }
 
@@ -65,29 +96,26 @@ function MenuItem({ icon, label, onPress, color }) {
 
 const styles = StyleSheet.create({
   header: {
-    backgroundColor: '#FF9800',
-    paddingBottom: 24,
-    paddingTop: 56,
+    backgroundColor: '#fff',
+    paddingBottom: 12,
+    paddingTop: 0,
     paddingHorizontal: 20,
-    borderBottomLeftRadius: 18,
-    borderBottomRightRadius: 18,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+    width: '100%',
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 8,
+    marginTop: 0,
   },
   backBtn: {
     marginRight: 2,
     marginLeft: -12,
   },
   headerTitle: {
-    color: '#fff',
+    color: '#222',
     fontSize: 26,
     fontWeight: 'bold',
     letterSpacing: 0.2,
@@ -96,34 +124,35 @@ const styles = StyleSheet.create({
   profileRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 0,
   },
   profileImage: {
     width: 84,
     height: 84,
     borderRadius: 42,
     borderWidth: 2,
-    borderColor: '#fff',
+    borderColor: '#eee',
     marginRight: 18,
     backgroundColor: '#fff',
   },
   username: {
-    color: '#fff',
+    color: '#222',
     fontSize: 18,
     fontWeight: 'bold',
     letterSpacing: 0.1,
   },
   email: {
-    color: '#ffe0b2',
+    color: '#666',
     fontSize: 14,
     marginTop: 2,
   },
   phone: {
-    color: '#ffe0b2',
+    color: '#666',
     fontSize: 14,
     marginTop: 2,
   },
   bio: {
-    color: '#ffe0b2',
+    color: '#666',
     fontSize: 13,
     marginTop: 2,
   },
@@ -131,12 +160,12 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     padding: 6,
     borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(0,0,0,0.06)',
   },
   menuSection: {
     backgroundColor: '#fff',
     flex: 1,
-    marginTop: 8,
+    marginTop: 0,
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
     overflow: 'hidden',

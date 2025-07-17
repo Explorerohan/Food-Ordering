@@ -111,7 +111,7 @@ const FoodDetailScreen = () => {
       };
       
       console.log('Cart API request body:', requestBody);
-      console.log('Cart API endpoint:', 'http://192.168.254.6:8000/api/cart/');
+      console.log('Cart API endpoint:', 'http://192.168.1.90:8000/api/cart/');
       console.log('Item ID:', item.id);
       console.log('Item name:', item.name);
       console.log('Selected size:', selectedSize);
@@ -119,7 +119,7 @@ const FoodDetailScreen = () => {
       console.log('Quantity:', quantity);
       
       const cartData = await apiCallWithAutoRefresh(async (accessToken) => {
-                 const response = await fetch('http://192.168.254.6:8000/api/cart/', {
+                 const response = await fetch('http://192.168.1.90:8000/api/cart/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -229,7 +229,7 @@ const FoodDetailScreen = () => {
       }
 
       // Use fetch for FormData
-              const response = await fetch('http://192.168.254.6:8000/api/reviews/', {
+              const response = await fetch('http://192.168.1.90:8000/api/reviews/', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -440,9 +440,9 @@ const FoodDetailScreen = () => {
                         <View style={styles.reviewImageCommentRow}>
                           <Text style={[styles.reviewComment, { flex: 1 }]}>{review.comment}</Text>
                           {review.image && typeof review.image === 'string' && review.image.length > 0 && (
-                                                          <TouchableOpacity onPress={() => handleReviewImagePress(review.image.startsWith('http') ? review.image : `http://192.168.254.6${review.image}`)}>
+                                                          <TouchableOpacity onPress={() => handleReviewImagePress(review.image.startsWith('http') ? review.image : `http://192.168.1.90${review.image}`)}>
                               <Image
-                                                                  source={{ uri: review.image.startsWith('http') ? review.image : `http://192.168.254.6${review.image}` }}
+                                                                  source={{ uri: review.image.startsWith('http') ? review.image : `http://192.168.1.90${review.image}` }}
                                 style={styles.reviewImageSmall}
                               />
                             </TouchableOpacity>

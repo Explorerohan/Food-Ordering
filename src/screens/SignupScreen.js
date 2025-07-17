@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, SafeAreaView, ImageBackground } from 'react-native';
+import { SafeAreaView as SafeAreaViewContext } from 'react-native-safe-area-context';
 
 const SignupScreen = ({ navigation, onSignup }) => {
   const [username, setUsername] = useState('');
@@ -23,7 +24,7 @@ const SignupScreen = ({ navigation, onSignup }) => {
 
   return (
     <ImageBackground source={require('../../assets/foods.png')} style={styles.bg} resizeMode="cover">
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaViewContext style={styles.safeArea} edges={["top","left","right"]}>
         <View style={styles.overlay}>
           <Text style={styles.title}>Create Account</Text>
           <Text style={styles.subtitle}>Sign up to get started</Text>
@@ -68,7 +69,7 @@ const SignupScreen = ({ navigation, onSignup }) => {
             <Text style={styles.link}>Already have an account? <Text style={{color:'#FF6B35', fontWeight:'bold'}}>Login</Text></Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </SafeAreaViewContext>
     </ImageBackground>
   );
 };

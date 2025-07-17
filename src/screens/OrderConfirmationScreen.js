@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, StatusBar, Platform, Alert } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Platform, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SafeAreaView as SafeAreaViewContext } from 'react-native-safe-area-context';
 
 // Helper function to refresh access token
 const refreshAccessToken = async () => {
   const refreshToken = await AsyncStorage.getItem('refreshToken');
   if (!refreshToken) return null;
   try {
-    const response = await fetch('http://192.168.254.6:8000/api/token/refresh/', {
+    const response = await fetch('http://192.168.1.90:8000/api/token/refresh/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh: refreshToken }),
@@ -54,7 +55,7 @@ const OrderConfirmationScreen = () => {
         setTotalAmount(0);
         return;
       }
-      let response = await fetch('http://192.168.254.6:8000/api/cart/', {
+      let response = await fetch('http://192.168.1.90:8000/api/cart/', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -64,7 +65,7 @@ const OrderConfirmationScreen = () => {
       if (data.code === 'token_not_valid') {
         token = await refreshAccessToken();
         if (token) {
-          response = await fetch('http://192.168.254.6:8000/api/cart/', {
+          response = await fetch('http://192.168.1.90:8000/api/cart/', {
             headers: {
               'Authorization': `Bearer ${token}`,
             },
@@ -118,7 +119,7 @@ const OrderConfirmationScreen = () => {
       };
 
       let token = await AsyncStorage.getItem('accessToken');
-      let response = await fetch('http://192.168.254.6:8000/api/orders/', {
+      let response = await fetch('http://192.168.1.90:8000/api/orders/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -131,7 +132,7 @@ const OrderConfirmationScreen = () => {
       if (response.status === 401) {
         token = await refreshAccessToken();
         if (token) {
-          response = await fetch('http://192.168.254.6:8000/api/orders/', {
+          response = await fetch('http://192.168.1.90:8000/api/orders/', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -150,7 +151,7 @@ const OrderConfirmationScreen = () => {
         // Clear the cart after successful order
         try {
           const clearToken = token || await AsyncStorage.getItem('accessToken');
-          await fetch('http://192.168.254.6:8000/api/cart/clear/', {
+          await fetch('http://192.168.1.90:8000/api/cart/clear/', {
             method: 'DELETE',
             headers: {
               'Authorization': `Bearer ${clearToken}`,
@@ -176,7 +177,7 @@ const OrderConfirmationScreen = () => {
   const headerPaddingTop = Platform.OS === 'android' ? StatusBar.currentHeight || 24 : 0;
 
   return (
-    <SafeAreaView style={[styles.safeArea, isModal && { paddingTop: 0 }]}>
+    <SafeAreaViewContext style={[styles.safeArea, isModal && { paddingTop: 0 }]} edges={["top","left","right"]}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
       <View style={[styles.header, { paddingTop: headerPaddingTop }]}>
         {isModal ? (
@@ -281,7 +282,7 @@ const OrderConfirmationScreen = () => {
           <Text style={styles.emptyCartWarning}>You cannot place an order with an empty cart.</Text>
         )}
       </View>
-    </SafeAreaView>
+    </SafeAreaViewContext>
   );
 };
 

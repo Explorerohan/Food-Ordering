@@ -6,7 +6,7 @@ import { profileApi } from '../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView as SafeAreaViewContext } from 'react-native-safe-area-context';
 
-function ProfileScreen({ navigation }) {
+function ProfileScreen({ navigation, onLogout }) {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -78,7 +78,7 @@ function ProfileScreen({ navigation }) {
         <MenuItem icon="heart-outline" label="My Orders" onPress={() => navigation.navigate('MyOrders')} />
         <MenuItem icon="map-outline" label="Track your order" onPress={() => {}} />
         <MenuItem icon="chatbubble-ellipses-outline" label="24 hrs Support" onPress={() => navigation.navigate('ChatScreen')} color="#2196F3" />
-        <MenuItem icon="log-out-outline" label="Sign Out" onPress={() => navigation.reset({ index: 0, routes: [{ name: 'Login' }] })} color="#FF6B35" />
+        <MenuItem icon="log-out-outline" label="Sign Out" onPress={() => onLogout(navigation)} color="#FF6B35" />
       </View>
     </SafeAreaViewContext>
   );

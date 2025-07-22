@@ -13,7 +13,7 @@ const LoginScreen = ({ navigation, onLogin }) => {
       return;
     }
     try {
-      await onLogin(username, password);
+      await onLogin(username, password, navigation);
     } catch (e) {
       setError('Invalid credentials.');
     }

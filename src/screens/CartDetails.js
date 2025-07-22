@@ -131,14 +131,27 @@ const CartDetails = ({ navigation, route }) => {
   };
 
   const handleProceedCheckout = async () => {
-    if (!selectedLocation) {
-      Alert.alert('Missing Location', 'Please select your delivery location.');
+    if (!selectedLocation || !selectedAddress) {
+      Alert.alert('Missing Address', 'Please select your delivery address on the map.');
       return;
     }
+    console.log('Selected address at checkout:', selectedAddress);
+    console.log('Order payload:', {
+      description: orderDescription,
+      latitude: selectedLocation.latitude,
+      longitude: selectedLocation.longitude,
+      delivery_address: selectedAddress,
+    });
     setProceeding(true);
     try {
+      const itemsPayload = cartItems.map(item => ({
+        food_item: item.food_item.id,
+        quantity: item.quantity,
+        price: item.food_price || (item.size && item.size.price) || 0,
+      }));
+
       const response = await fetchWithAutoRefresh(async (accessToken) => {
-        return await fetch('http://192.168.1.90:8000/api/cart/checkout/', {
+        return await fetch('http://192.168.1.90:8000/api/orders/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -148,13 +161,17 @@ const CartDetails = ({ navigation, route }) => {
             description: orderDescription,
             latitude: selectedLocation.latitude,
             longitude: selectedLocation.longitude,
+            delivery_address: selectedAddress,
+            total_amount: total,
+            items: itemsPayload,
           }),
         });
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create order');
+        console.error('Backend error on order creation:', errorData);
+        throw new Error('Failed to create order');
       }
 
       const result = await response.json();
@@ -256,7 +273,7 @@ const CartDetails = ({ navigation, route }) => {
   const renderHeader = () => (
     <View style={styles.header}>
       <View style={styles.headerContentRow}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.backArrow, {marginLeft: -12, marginRight: 2}]}>
+        <TouchableOpacity onPress={() => navigation.navigate('MainTabs', { screen: 'Home' })} style={[styles.backArrow, {marginLeft: -12, marginRight: 2}]}>
           <Ionicons name="arrow-back" size={28} color="#222" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Cart</Text>

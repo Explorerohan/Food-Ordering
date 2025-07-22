@@ -24,6 +24,7 @@ import { AuthProvider, AuthContext } from './src/context/AuthContext';
 import ChatScreen from './src/screens/ChatScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import SystemNavigationBar from 'react-native-system-navigation-bar';
+import EsewaPaymentScreen from './src/screens/EsewaPaymentScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -237,6 +238,11 @@ export default function App() {
   };
 
   const handleLogout = async (navigation) => {
+    // Clear AuthContext
+    if (auth.current && auth.current.logout) {
+      await auth.current.logout();
+    }
+    
     const allKeys = await AsyncStorage.getAllKeys();
     const userKeys = allKeys.filter(
       key =>
@@ -247,7 +253,10 @@ export default function App() {
         key === 'authToken' ||
         key === 'accessToken' ||
         key === 'refreshToken' ||
-        key.startsWith('phoneNumber_')
+        key.startsWith('phoneNumber_') ||
+        key === 'cart' ||
+        key === 'user' ||
+        key === 'token'
     );
     await AsyncStorage.multiRemove(userKeys);
     setIsAuthenticated(false);
@@ -309,6 +318,7 @@ export default function App() {
                     <Stack.Screen name="MapScreen" component={MapScreen} />
                     <Stack.Screen name="CheckoutFormScreen" component={CheckoutFormScreen} />
                     <Stack.Screen name="ChatScreen" component={ChatScreen} options={{ title: 'Live Chat' }} />
+                    <Stack.Screen name="EsewaPaymentScreen" component={EsewaPaymentScreen} />
                   </>
                 )}
               </Stack.Navigator>

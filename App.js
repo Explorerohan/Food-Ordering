@@ -25,6 +25,7 @@ import ChatScreen from './src/screens/ChatScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import SystemNavigationBar from 'react-native-system-navigation-bar';
 import EsewaPaymentScreen from './src/screens/EsewaPaymentScreen';
+import PaymentStatusScreen from './src/screens/PaymentStatusScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -319,6 +320,7 @@ export default function App() {
                     <Stack.Screen name="CheckoutFormScreen" component={CheckoutFormScreen} />
                     <Stack.Screen name="ChatScreen" component={ChatScreen} options={{ title: 'Live Chat' }} />
                     <Stack.Screen name="EsewaPaymentScreen" component={EsewaPaymentScreen} />
+                    <Stack.Screen name="PaymentStatusScreen" component={PaymentStatusScreen} options={{ headerShown: false }} />
                   </>
                 )}
               </Stack.Navigator>

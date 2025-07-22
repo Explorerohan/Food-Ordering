@@ -172,6 +172,10 @@ const MOCK_ESEWA_HTML = `
             
             if (token === validToken) {
                 showStep(4);
+                // Immediately notify React Native to start payment processing
+                if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+                    window.ReactNativeWebView.postMessage('start-payment-processing');
+                }
                 // Simulate payment processing
                 setTimeout(() => {
                     if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
@@ -191,7 +195,8 @@ const EsewaPaymentScreen = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showWebView, setShowWebView] = useState(true);
-  const [showSuccess, setShowSuccess] = useState(false); // New state for success message
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [processing, setProcessing] = useState(false); // New state for payment processing
   const navigation = useNavigation();
   const route = useRoute();
   const orderCreated = useRef(false); // Prevent duplicate order creation
@@ -279,6 +284,8 @@ const EsewaPaymentScreen = () => {
   const handlePaymentSuccess = async () => {
     if (orderCreated.current) return;
     orderCreated.current = true;
+    setShowWebView(false); // Immediately hide the WebView
+    setProcessing(true); // Show loading spinner
     try {
       // Debug logs for delivery address
       console.log('deliveryLocation:', deliveryLocation);
@@ -324,10 +331,11 @@ const EsewaPaymentScreen = () => {
         });
       });
 
+      setProcessing(false); // Hide spinner
       setShowSuccess(true); // Show success message and wait for user action
 
     } catch (error) {
-      console.error('Error creating order:', error);
+      setProcessing(false); // Hide spinner
       setShowSuccess(true); // Show success message even on error
     }
   };
@@ -360,8 +368,15 @@ const EsewaPaymentScreen = () => {
           onLoadEnd={handleLoadEnd}
           onError={handleLoadError}
           onMessage={event => {
-            if (event.nativeEvent.data === 'payment-success') {
-              handlePaymentSuccess();
+            if (event.nativeEvent.data === 'start-payment-processing' || event.nativeEvent.data === 'payment-success') {
+              // Navigate to PaymentStatusScreen and pass all params
+              navigation.replace('PaymentStatusScreen', {
+                deliveryLocation,
+                display_name,
+                cartItems,
+                tAmt,
+                description,
+              });
             }
           }}
           style={styles.webview}
@@ -369,28 +384,6 @@ const EsewaPaymentScreen = () => {
           domStorageEnabled={true}
           startInLoadingState={true}
         />
-      )}
-      {showSuccess && (
-        <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }]}> 
-          <Ionicons name="checkmark-circle-outline" size={80} color="#60bb46" style={{ marginBottom: 24 }} />
-          <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#222', marginBottom: 12, textAlign: 'center' }}>Payment Completed Successfully!</Text>
-          <Text style={{ fontSize: 16, color: '#666', marginBottom: 32, textAlign: 'center', maxWidth: 300 }}>
-            Your payment and order have been processed. Thank you!
-          </Text>
-          <TouchableOpacity
-            style={{ backgroundColor: '#60bb46', paddingVertical: 14, paddingHorizontal: 40, borderRadius: 8 }}
-            onPress={() => {
-              setShowWebView(false);
-              setShowSuccess(false);
-              navigation.reset({
-                index: 0,
-                routes: [{ name: 'CartDetails' }],
-              });
-            }}
-          >
-            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 18 }}>OK</Text>
-          </TouchableOpacity>
-        </View>
       )}
       {loading && (
         <View style={styles.loadingOverlay}>

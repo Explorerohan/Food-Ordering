@@ -15,6 +15,7 @@ import {
   TextInput,
   ScrollView,
   Animated,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -31,7 +32,6 @@ const API_BASE_URL = 'http://192.168.1.90:8000';
 const DashboardScreen = ({ username }) => {
   const navigation = useNavigation();
   const [foodItems, setFoodItems] = useState([]);
-  const [filteredItems, setFilteredItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -40,9 +40,18 @@ const DashboardScreen = ({ username }) => {
   const [displayedIndex, setDisplayedIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const [userName, setUserName] = useState('');
+  const [isFilterVisible, setIsFilterVisible] = useState(false);
+  const [filters, setFilters] = useState({
+    priceRange: 'all',
+    rating: 0,
+    sortBy: 'default'
+  });
+  const [tempFilters, setTempFilters] = useState({
+    priceRange: 'all',
+    rating: 0,
+    sortBy: 'default'
+  });
   const slideAnim = React.useRef(new Animated.Value(0)).current;
-
-  const staticAddress = 'Itahari-halgada';
 
   // Dynamic placeholder cycling through food names
   const foodNames = [
@@ -83,11 +92,7 @@ const DashboardScreen = ({ username }) => {
 
   useEffect(() => {
     fetchFoodItems();
-  }, []);
-
-  useEffect(() => {
-    filterItems();
-  }, [foodItems, selectedCategory]);
+  }, []); // Only fetch on initial load
 
   useEffect(() => {
     console.log('Categories state updated:', categories);
@@ -116,7 +121,32 @@ const DashboardScreen = ({ username }) => {
   const fetchFoodItems = async () => {
     try {
       setLoading(true);
-      const data = await foodApi.getAllFoodItems();
+      
+      // Build query parameters for backend filtering
+      const queryParams = new URLSearchParams();
+      
+      // Add category filter
+      if (selectedCategory !== 'All') {
+        queryParams.append('category', selectedCategory);
+      }
+      
+      // Add price range filter
+      if (filters.priceRange !== 'all') {
+        queryParams.append('price_range', filters.priceRange);
+      }
+      
+      // Add minimum rating filter
+      if (filters.rating > 0) {
+        queryParams.append('min_rating', filters.rating.toString());
+      }
+      
+      // Add sorting
+      if (filters.sortBy !== 'default') {
+        queryParams.append('sort_by', filters.sortBy);
+      }
+      
+      // Get food items with filters from backend
+      const data = await foodApi.getAllFoodItems(queryParams);
       setFoodItems(data);
       
       // Fetch categories separately to ensure all categories are shown
@@ -168,69 +198,57 @@ const DashboardScreen = ({ username }) => {
     }
   };
 
-  const filterItems = () => {
-    // Map food items to ensure correct image URL and fields
-    const mapItem = (item) => {
-      let imageUrl = item.image;
-      if (imageUrl && !imageUrl.startsWith('http')) {
-        imageUrl = API_BASE_URL + imageUrl;
+  const applyFilters = async () => {
+    try {
+      setLoading(true);
+      
+      // Build query parameters for backend filtering
+      const queryParams = new URLSearchParams();
+      
+      // Add category filter
+      if (selectedCategory !== 'All') {
+        queryParams.append('category', selectedCategory);
       }
-      return {
-        ...item,
-        image: imageUrl,
-        // Remove unsupported fields
-        isVegetarian: undefined,
-        isSpicy: undefined,
-      };
-    };
-
-    if (selectedCategory === 'All') {
-      setFilteredItems(foodItems.map(mapItem));
-    } else {
-      const filtered = foodItems.filter(item => {
-        const itemCategory = typeof item.category === 'object' 
-          ? item.category.name 
-          : item.category;
-        return itemCategory === selectedCategory;
-      }).map(mapItem);
-      setFilteredItems(filtered);
+      
+      // Add price range filter
+      if (tempFilters.priceRange !== 'all') {
+        queryParams.append('price_range', tempFilters.priceRange);
+      }
+      
+      // Add minimum rating filter
+      if (tempFilters.rating > 0) {
+        queryParams.append('min_rating', tempFilters.rating.toString());
+      }
+      
+      // Add sorting
+      if (tempFilters.sortBy !== 'default') {
+        queryParams.append('sort_by', tempFilters.sortBy);
+      }
+      
+      // Get food items with filters from backend
+      const data = await foodApi.getAllFoodItems(queryParams);
+      setFoodItems(data);
+      
+      // Apply the temporary filters to the actual filters
+      setFilters(tempFilters);
+    } catch (error) {
+      console.error('Error applying filters:', error);
+      Alert.alert(
+        'Filter Error',
+        'Failed to apply filters. Please try again.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Retry', onPress: applyFilters }
+        ]
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Group items by category for section headers
-  const groupedItems = React.useMemo(() => {
-    if (selectedCategory !== 'All') {
-      return [{
-        title: selectedCategory,
-        data: filteredItems
-      }];
-    }
 
-    const groups = {};
-    foodItems.forEach(item => {
-      const category = typeof item.category === 'object' 
-        ? item.category.name 
-        : item.category;
-      
-      if (!category || category === 'All') return; // Skip items with no category or 'All' category
-      
-      if (!groups[category]) {
-        groups[category] = [];
-      }
-      groups[category].push(item);
-    });
 
-    return Object.entries(groups).map(([title, data]) => ({
-      title,
-      data
-    }));
-  }, [foodItems, filteredItems, selectedCategory]);
 
-  const renderSectionHeader = ({ section: { title } }) => (
-    <View style={styles.sectionHeader}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-    </View>
-  );
 
   const handleAddToCart = async (item) => {
     try {
@@ -261,7 +279,22 @@ const DashboardScreen = ({ username }) => {
 
   const renderItem = ({ item }) => {
     if (!item || typeof item !== 'object') return null;
-    return <FoodItemCard item={item} onPress={handleFoodItemPress} onAddToCart={handleAddToCart} />;
+    
+    // Map food items to ensure correct image URL and fields
+    let imageUrl = item.image;
+    if (imageUrl && !imageUrl.startsWith('http')) {
+      imageUrl = API_BASE_URL + imageUrl;
+    }
+    
+    const mappedItem = {
+      ...item,
+      image: imageUrl,
+      // Remove unsupported fields
+      isVegetarian: undefined,
+      isSpicy: undefined,
+    };
+    
+    return <FoodItemCard item={mappedItem} onPress={handleFoodItemPress} onAddToCart={handleAddToCart} />;
   };
 
   const onRefresh = async () => {
@@ -276,19 +309,12 @@ const DashboardScreen = ({ username }) => {
 
   const renderHeader = () => (
     <View style={styles.headerContainer}>
-      <View style={styles.headerTopRow}>
-        <TouchableOpacity style={styles.menuButton}>
-          <Ionicons name="menu" size={26} color="#222" />
-        </TouchableOpacity>
-        <View style={styles.addressContainer}>
-          <Text style={styles.deliverToText}>Deliver to ▾</Text>
-          <Text style={styles.addressText}>{staticAddress}</Text>
-        </View>
-        <TouchableOpacity style={styles.profileImageContainer}>
-          <Image source={{ uri: profileImage || 'https://randomuser.me/api/portraits/men/32.jpg' }} style={styles.profileImage} />
+      <View style={styles.greetingRow}>
+        <Text style={styles.greetingHello}><Text style={styles.greetingHelloBold}>Hello {userName || 'User'}!</Text> <Text style={styles.greetingWave}>👋</Text></Text>
+        <TouchableOpacity style={styles.notificationButton}>
+          <Ionicons name="notifications-outline" size={28} color="#222" />
         </TouchableOpacity>
       </View>
-      <Text style={styles.greetingHello}><Text style={styles.greetingHelloBold}>Hello {userName || 'User'}!</Text> <Text style={styles.greetingWave}>👋</Text></Text>
       <Text style={styles.greetingTitle}>What would you like to order?</Text>
       <View style={styles.searchRow}>
         <View style={styles.searchBox}>
@@ -326,10 +352,122 @@ const DashboardScreen = ({ username }) => {
             autoCapitalize="none"
           />
         </View>
-        <TouchableOpacity style={styles.filterButton}>
+        <TouchableOpacity 
+          style={styles.filterButton}
+          onPress={() => setIsFilterVisible(true)}
+        >
           <Ionicons name="options-outline" size={22} color="#fff" />
         </TouchableOpacity>
       </View>
+      {isFilterVisible && (
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={isFilterVisible}
+          onRequestClose={() => setIsFilterVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Filters</Text>
+                <TouchableOpacity onPress={() => setIsFilterVisible(false)}>
+                  <Ionicons name="close" size={24} color="#222" />
+                </TouchableOpacity>
+              </View>
+              
+              <ScrollView>
+                {/* Price Range */}
+                <View style={styles.filterSection}>
+                  <Text style={styles.filterTitle}>Price Range</Text>
+                  <View style={styles.filterOptions}>
+                    {['All', 'Under Rs.200', 'Rs.200-Rs.500', 'Over Rs.500'].map((range) => (
+                      <TouchableOpacity
+                        key={range}
+                        style={[
+                          styles.filterOption,
+                          tempFilters.priceRange === range.toLowerCase() && styles.filterOptionSelected
+                        ]}
+                        onPress={() => setTempFilters({...tempFilters, priceRange: range.toLowerCase()})}
+                      >
+                        <Text style={[
+                          styles.filterOptionText,
+                          tempFilters.priceRange === range.toLowerCase() && styles.filterOptionTextSelected
+                        ]}>{range}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+
+                {/* Rating Filter */}
+                <View style={styles.filterSection}>
+                  <Text style={styles.filterTitle}>Minimum Rating</Text>
+                  <View style={styles.ratingContainer}>
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <TouchableOpacity
+                        key={star}
+                        onPress={() => setTempFilters({...tempFilters, rating: star})}
+                      >
+                        <Ionicons
+                          name={star <= tempFilters.rating ? "star" : "star-outline"}
+                          size={30}
+                          color={star <= tempFilters.rating ? "#FFB300" : "#888"}
+                          style={styles.starIcon}
+                        />
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+
+                {/* Sort By */}
+                <View style={styles.filterSection}>
+                  <Text style={styles.filterTitle}>Sort By</Text>
+                  <View style={styles.filterOptions}>
+                    {['Default', 'Price: Low to High', 'Price: High to Low', 'Rating'].map((sort) => (
+                      <TouchableOpacity
+                        key={sort}
+                        style={[
+                          styles.filterOption,
+                          tempFilters.sortBy === sort.toLowerCase() && styles.filterOptionSelected
+                        ]}
+                        onPress={() => setTempFilters({...tempFilters, sortBy: sort.toLowerCase()})}
+                      >
+                        <Text style={[
+                          styles.filterOptionText,
+                          tempFilters.sortBy === sort.toLowerCase() && styles.filterOptionTextSelected
+                        ]}>{sort}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              </ScrollView>
+
+              <View style={styles.modalFooter}>
+                <TouchableOpacity 
+                  style={styles.resetButton}
+                  onPress={() => {
+                    setTempFilters({
+                      priceRange: 'all',
+                      rating: 0,
+                      sortBy: 'default'
+                    });
+                  }}
+                >
+                  <Text style={styles.resetButtonText}>Reset</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.applyButton}
+                  onPress={async () => {
+                    await applyFilters();
+                    setIsFilterVisible(false);
+                  }}
+                >
+                  <Text style={styles.applyButtonText}>Apply Filters</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
     </View>
   );
 
@@ -369,13 +507,6 @@ const DashboardScreen = ({ username }) => {
 
   // Handler for 'View All' in Best Seller section
   const handleViewAllBestSellers = () => {
-    // Sort all food items by average rating (descending)
-    const sorted = [...foodItems].sort((a, b) => {
-      const avgA = getAverageRating(a) || 0;
-      const avgB = getAverageRating(b) || 0;
-      return avgB - avgA;
-    });
-    setFilteredItems(sorted);
     setSelectedCategory('All');
   };
 
@@ -442,7 +573,7 @@ const DashboardScreen = ({ username }) => {
         )}
         <View style={styles.sectionRow}>
           <Text style={styles.sectionTitle}>Top Categories</Text>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('AllFoodScreen')}>
             <Text style={styles.sectionViewAll}>View All</Text>
           </TouchableOpacity>
         </View>
@@ -451,12 +582,12 @@ const DashboardScreen = ({ username }) => {
           selectedCategory={selectedCategory}
           onSelectCategory={setSelectedCategory}
         />
-        {/* Render filtered food items here */}
-        {filteredItems.length === 0 ? (
+        {/* Render food items here */}
+        {foodItems.length === 0 ? (
           renderEmptyState()
         ) : (
           <FlatList
-            data={filteredItems.filter(item => item && typeof item === 'object')}
+            data={foodItems.filter(item => item && typeof item === 'object')}
             keyExtractor={item => item.id?.toString() || item._id?.toString() || Math.random().toString()}
             renderItem={renderItem}
             contentContainerStyle={styles.gridListContainer}
@@ -488,58 +619,30 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     backgroundColor: '#fff',
-    paddingTop: 8,
+    paddingTop: 4,
     paddingBottom: 4,
     paddingHorizontal: 16,
     borderBottomWidth: 0,
   },
-  headerTopRow: {
+  greetingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: 4,
   },
-  menuButton: {
-    padding: 6,
-    borderRadius: 16,
+  notificationButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
     backgroundColor: '#f6f6f6',
-  },
-  addressContainer: {
-    flex: 1,
-    marginLeft: 12,
-    marginRight: 12,
-  },
-  deliverToText: {
-    fontSize: 13,
-    color: '#888',
-    fontWeight: '500',
-  },
-  addressText: {
-    fontSize: 15,
-    color: '#222',
-    fontWeight: 'bold',
-  },
-  profileImageContainer: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: '#FF6B35',
-    backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  profileImage: {
-    width: 34,
-    height: 34,
-    borderRadius: 8,
   },
   greetingHello: {
     fontSize: 20,
     fontWeight: '400',
     color: '#222',
-    marginBottom: 0,
+    marginBottom: -4,
     letterSpacing: 0.1,
     flexDirection: 'row',
     alignItems: 'center',
@@ -555,10 +658,11 @@ const styles = StyleSheet.create({
     marginLeft: 2,
   },
   greetingTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
     color: '#181818',
-    marginBottom: 14,
+    marginTop: 0,
+    marginBottom: 10,
     letterSpacing: 0.2,
   },
   searchRow: {
@@ -779,6 +883,130 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
     shadowRadius: 2,
+  },
+  // Filter Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#e0e0e0',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    paddingTop: 20,
+    paddingHorizontal: 16,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingHorizontal: 4,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#222',
+  },
+  filterSection: {
+    marginBottom: 24,
+  },
+  filterTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#222',
+    marginBottom: 12,
+  },
+  filterOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: -4,
+  },
+  filterOption: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#f6f6f6',
+    marginHorizontal: 4,
+    marginBottom: 8,
+  },
+  filterOptionSelected: {
+    backgroundColor: '#FF6B35',
+  },
+  filterOptionText: {
+    color: '#666',
+    fontSize: 14,
+  },
+  filterOptionTextSelected: {
+    color: '#fff',
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  starIcon: {
+    marginRight: 8,
+  },
+  toggleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+  },
+  toggleText: {
+    fontSize: 14,
+    color: '#222',
+  },
+  toggle: {
+    width: 50,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#e0e0e0',
+    padding: 2,
+  },
+  toggleActive: {
+    backgroundColor: '#FF6B35',
+  },
+  toggleHandle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#fff',
+  },
+  toggleHandleActive: {
+    transform: [{ translateX: 22 }],
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  resetButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FF6B35',
+  },
+  resetButtonText: {
+    color: '#FF6B35',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  applyButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 8,
+    backgroundColor: '#FF6B35',
+  },
+  applyButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

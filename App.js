@@ -6,6 +6,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import DashboardScreen from './src/screens/DashboardScreen';
 import FoodDetailScreen from './src/screens/FoodDetailScreen';
+import AllFoodScreen from './src/screens/AllFoodScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import SignupScreen from './src/screens/SignupScreen';
 import EditProfileScreen from './src/screens/EditProfileScreen';
@@ -321,6 +322,7 @@ export default function App() {
                     <Stack.Screen name="ChatScreen" component={ChatScreen} options={{ title: 'Live Chat' }} />
                     <Stack.Screen name="EsewaPaymentScreen" component={EsewaPaymentScreen} />
                     <Stack.Screen name="PaymentStatusScreen" component={PaymentStatusScreen} options={{ headerShown: false }} />
+                    <Stack.Screen name="AllFoodScreen" component={AllFoodScreen} options={{ title: 'All Food Items' }} />
                   </>
                 )}
               </Stack.Navigator>

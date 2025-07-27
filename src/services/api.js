@@ -15,9 +15,13 @@ const api = axios.create({
 // Food API service
 export const foodApi = {
   // Get all food items
-  getAllFoodItems: async () => {
+  getAllFoodItems: async (queryParams = null) => {
     try {
-      const response = await api.get('/foods/');
+      let url = '/foods/';
+      if (queryParams) {
+        url += '?' + queryParams.toString();
+      }
+      const response = await api.get(url);
       return response.data;
     } catch (error) {
       console.error('Error fetching food items:', error);

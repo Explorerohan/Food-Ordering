@@ -51,6 +51,7 @@ const DashboardScreen = ({ username }) => {
     rating: 0,
     sortBy: 'default'
   });
+  const [searchQuery, setSearchQuery] = useState('');
   const slideAnim = React.useRef(new Animated.Value(0)).current;
 
   // Dynamic placeholder cycling through food names
@@ -91,8 +92,9 @@ const DashboardScreen = ({ username }) => {
   }, []);
 
   useEffect(() => {
+    console.log('Category changed to:', selectedCategory);
     fetchFoodItems();
-  }, []); // Only fetch on initial load
+  }, [selectedCategory]); // Fetch when category changes
 
   useEffect(() => {
     console.log('Categories state updated:', categories);
@@ -145,9 +147,22 @@ const DashboardScreen = ({ username }) => {
         queryParams.append('sort_by', filters.sortBy);
       }
       
+      // Add limit for dashboard (show only 6 items)
+      queryParams.append('limit', '6');
+      
+      // Debug: Log the API call
+      console.log('Dashboard API Call:', queryParams.toString());
+      
       // Get food items with filters from backend
       const data = await foodApi.getAllFoodItems(queryParams);
-      setFoodItems(data);
+      console.log('Dashboard received items:', data.length, 'for category:', selectedCategory);
+      console.log('First few items:', data.slice(0, 3).map(item => item.name));
+      console.log('All item names:', data.map(item => item.name));
+      
+      // Temporary fix: Force limit to 6 items on frontend
+      const limitedData = data.slice(0, 6);
+      console.log('Limited to 6 items:', limitedData.length);
+      setFoodItems(limitedData);
       
       // Fetch categories separately to ensure all categories are shown
       try {
@@ -205,6 +220,11 @@ const DashboardScreen = ({ username }) => {
       // Build query parameters for backend filtering
       const queryParams = new URLSearchParams();
       
+      // Add search query
+      if (searchQuery.trim()) {
+        queryParams.append('search', searchQuery.trim());
+      }
+      
       // Add category filter
       if (selectedCategory !== 'All') {
         queryParams.append('category', selectedCategory);
@@ -225,9 +245,17 @@ const DashboardScreen = ({ username }) => {
         queryParams.append('sort_by', tempFilters.sortBy);
       }
       
+      // Add limit for dashboard (show only 6 items)
+      queryParams.append('limit', '6');
+      
       // Get food items with filters from backend
       const data = await foodApi.getAllFoodItems(queryParams);
-      setFoodItems(data);
+      console.log('ApplyFilters received items:', data.length);
+      
+      // Temporary fix: Force limit to 6 items on frontend
+      const limitedData = data.slice(0, 6);
+      console.log('ApplyFilters limited to 6 items:', limitedData.length);
+      setFoodItems(limitedData);
       
       // Apply the temporary filters to the actual filters
       setFilters(tempFilters);
@@ -319,39 +347,23 @@ const DashboardScreen = ({ username }) => {
       <View style={styles.searchRow}>
         <View style={styles.searchBox}>
           <Ionicons name="search-outline" size={20} color="#888" style={{ marginRight: 8 }} />
-          <View style={styles.animatedPlaceholderContainer} pointerEvents="none">
-            <Animated.Text
-              style={[
-                styles.animatedPlaceholder,
-                {
-                  transform: [
-                    {
-                      translateY: slideAnim.interpolate({
-                        inputRange: [-1, 0, 1],
-                        outputRange: [-32, 0, 32],
-                      }),
-                    },
-                  ],
-                  opacity: slideAnim.interpolate({
-                    inputRange: [-1, 0, 1],
-                    outputRange: [0, 1, 0],
-                  }),
-                },
-              ]}
-              numberOfLines={1}
-            >
-              {`Search ${foodNames[displayedIndex]}...`}
-            </Animated.Text>
-          </View>
           <TextInput
-            style={[styles.searchInput, { position: 'absolute', left: 0, right: 0, width: '100%' }]}
-            placeholder=""
-            value={''}
+            style={styles.searchInput}
+            placeholder={`Search ${foodNames[displayedIndex]}...`}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            onSubmitEditing={() => applyFilters()}
             underlineColorAndroid="transparent"
             autoCorrect={false}
             autoCapitalize="none"
           />
         </View>
+        <TouchableOpacity 
+          style={styles.searchButton}
+          onPress={() => applyFilters()}
+        >
+          <Ionicons name="search" size={20} color="#FF6B35" />
+        </TouchableOpacity>
         <TouchableOpacity 
           style={styles.filterButton}
           onPress={() => setIsFilterVisible(true)}
@@ -530,7 +542,6 @@ const DashboardScreen = ({ username }) => {
   return (
     <SafeAreaViewContext style={styles.container} edges={["top","left","right"]}>
       <StatusBar barStyle="dark-content" />
-      {renderHeader()}
       <ScrollView
         contentContainerStyle={{ paddingBottom: 24 }}
         showsVerticalScrollIndicator={false}
@@ -538,6 +549,7 @@ const DashboardScreen = ({ username }) => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
+        {renderHeader()}
         <View style={styles.sectionRow}>
           <Text style={styles.sectionTitle}>Best Seller</Text>
           <TouchableOpacity onPress={handleViewAllBestSellers}>
@@ -680,23 +692,7 @@ const styles = StyleSheet.create({
     height: 44,
     marginRight: 10,
   },
-  animatedPlaceholderContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    position: 'relative',
-    height: 32,
-    overflow: 'hidden',
-  },
-  animatedPlaceholder: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    color: '#888',
-    fontSize: 18,
-    paddingLeft: 0,
-    paddingRight: 0,
-    textAlignVertical: 'center',
-  },
+
   searchInput: {
     flex: 1,
     fontSize: 15,
@@ -704,6 +700,15 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     borderWidth: 0,
     padding: 0,
+  },
+  searchButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#f6f6f6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
   },
   filterButton: {
     width: 44,

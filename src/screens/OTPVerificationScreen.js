@@ -18,10 +18,6 @@ import { authApi } from '../services/api';
 const OTPVerificationScreen = ({ navigation, route }) => {
   const { email } = route.params || {};
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState(600); // 10 minutes in seconds
@@ -57,8 +53,6 @@ const OTPVerificationScreen = ({ navigation, route }) => {
     const newOtp = [...otp];
     newOtp[index] = text;
     setOtp(newOtp);
-
-    // Auto-focus next input
     if (text && index < 5) {
       otpRefs.current[index + 1]?.focus();
     }
@@ -85,55 +79,24 @@ const OTPVerificationScreen = ({ navigation, route }) => {
     }
   };
 
-  const handleResetPassword = async () => {
+  const handleVerifyOTP = async () => {
     const otpString = otp.join('');
-    
     if (otpString.length !== 6) {
       Alert.alert('Error', 'Please enter the complete 6-digit OTP');
       return;
     }
-
-    if (!newPassword || !confirmPassword) {
-      Alert.alert('Error', 'All fields are required');
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
-      return;
-    }
-
-    if (newPassword.length < 8) {
-      Alert.alert('Error', 'Password must be at least 8 characters long');
-      return;
-    }
-
     setLoading(true);
     try {
-      await authApi.resetPassword(email, otpString, newPassword, confirmPassword);
-      
-      Alert.alert(
-        'Success', 
-        'Your password has been reset successfully! You can now login with your new password.',
-        [
-          { 
-            text: 'OK', 
-            onPress: () => {
-              setOtp(['', '', '', '', '', '']);
-              setNewPassword('');
-              setConfirmPassword('');
-              // Navigate back to login
-              navigation.reset({
-                index: 0,
-                routes: [{ name: 'Login' }],
-              });
-            }
-          }
-        ]
-      );
+      await authApi.verifyOTP(email, otpString);
+      Alert.alert('Success', 'OTP verified! Please set your new password.', [
+        {
+          text: 'OK',
+          onPress: () => navigation.navigate('SetNewPassword', { email, otp: otpString })
+        }
+      ]);
     } catch (error) {
-      console.error('Reset password error:', error);
-      const errorMessage = error.response?.data?.error || 'Failed to reset password. Please try again.';
+      console.error('Verify OTP error:', error);
+      const errorMessage = error.response?.data?.error || 'Failed to verify OTP. Please try again.';
       Alert.alert('Error', errorMessage);
     } finally {
       setLoading(false);
@@ -197,75 +160,20 @@ const OTPVerificationScreen = ({ navigation, route }) => {
               </View>
             </View>
 
-            {/* New Password */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>New Password</Text>
-              <View style={styles.passwordInput}>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="Enter new password"
-                  value={newPassword}
-                  onChangeText={setNewPassword}
-                  secureTextEntry={!showNewPassword}
-                  placeholderTextColor="#999"
-                />
-                <TouchableOpacity
-                  style={styles.eyeButton}
-                  onPress={() => setShowNewPassword(!showNewPassword)}
-                >
-                  <Ionicons 
-                    name={showNewPassword ? "eye-off" : "eye"} 
-                    size={20} 
-                    color="#666" 
-                  />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* Confirm New Password */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Confirm New Password</Text>
-              <View style={styles.passwordInput}>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="Confirm new password"
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  secureTextEntry={!showConfirmPassword}
-                  placeholderTextColor="#999"
-                />
-                <TouchableOpacity
-                  style={styles.eyeButton}
-                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                >
-                  <Ionicons 
-                    name={showConfirmPassword ? "eye-off" : "eye"} 
-                    size={20} 
-                    color="#666" 
-                  />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* Password Requirements */}
-            <View style={styles.requirementsContainer}>
-              <Text style={styles.requirementsTitle}>Password Requirements:</Text>
-              <Text style={styles.requirement}>• At least 8 characters long</Text>
-              <Text style={styles.requirement}>• Use a mix of letters, numbers, and symbols</Text>
-              <Text style={styles.requirement}>• Avoid common passwords</Text>
-            </View>
-
-            {/* Submit Button */}
+            {/* Verify OTP Button */}
             <TouchableOpacity
               style={[styles.submitButton, (loading || timeLeft === 0) && styles.submitButtonDisabled]}
-              onPress={handleResetPassword}
+              onPress={handleVerifyOTP}
               disabled={loading || timeLeft === 0}
             >
               {loading ? (
-                <ActivityIndicator color="#fff" size="small" />
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator color="#fff" size="small" />
+                  <Text style={styles.loadingText}>Verifying OTP...</Text>
+                </View>
               ) : (
                 <Text style={styles.submitButtonText}>
-                  {timeLeft === 0 ? 'OTP Expired' : 'Reset Password'}
+                  {timeLeft === 0 ? 'OTP Expired' : 'Verify OTP'}
                 </Text>
               )}
             </TouchableOpacity>
@@ -457,6 +365,18 @@ const styles = StyleSheet.create({
     color: '#FF6B35',
     fontSize: 16,
     fontWeight: '600',
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+  },
+  loadingText: {
+    marginLeft: 10,
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
   },
 });
 

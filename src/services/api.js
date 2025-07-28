@@ -172,6 +172,18 @@ export const authApi = {
       throw error;
     }
   },
+  verifyOTP: async (email, otp) => {
+    try {
+      const response = await api.post('/api/verify-otp/', {
+        email: email,
+        otp: otp,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Verify OTP error:', error);
+      throw error;
+    }
+  },
 };
 
 // Profile API service

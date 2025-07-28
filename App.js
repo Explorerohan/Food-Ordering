@@ -30,6 +30,7 @@ import ProfileScreen from './src/screens/ProfileScreen';
 import SystemNavigationBar from 'react-native-system-navigation-bar';
 import EsewaPaymentScreen from './src/screens/EsewaPaymentScreen';
 import PaymentStatusScreen from './src/screens/PaymentStatusScreen';
+import SetNewPasswordScreen from './src/screens/SetNewPasswordScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -308,6 +309,7 @@ export default function App() {
                     </Stack.Screen>
                     <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
                     <Stack.Screen name="OTPVerification" component={OTPVerificationScreen} />
+                    <Stack.Screen name="SetNewPassword" component={SetNewPasswordScreen} />
                   </>
                 ) : (
                   <>

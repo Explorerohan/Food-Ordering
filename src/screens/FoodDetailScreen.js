@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, Alert, Dimensions, TextInput, Platform, ActivityIndicator, Button, Animated, Modal, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, Alert, Dimensions, TextInput, Platform, ActivityIndicator, Button, Modal, TouchableWithoutFeedback, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -23,54 +23,15 @@ const FoodDetailScreen = () => {
   const [reviews, setReviews] = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(true);
   const [searchText, setSearchText] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
   // State for review image modal
   const [modalVisible, setModalVisible] = useState(false);
   const [modalImage, setModalImage] = useState(null);
   // State for quantity
   const [quantity, setQuantity] = useState(1);
 
-  // Dynamic placeholder cycling through food names
-  const foodNames = [
-    'Pizza',
-    'Burger',
-    'Biryani',
-    'Pasta',
-    'Sushi',
-    'Tacos',
-    'Dosa',
-    'Paneer',
-    'Noodles',
-    'Salad',
-  ];
-  const [placeholderIndex, setPlaceholderIndex] = useState(0);
-  const [displayedIndex, setDisplayedIndex] = useState(0);
-  const [isAnimating, setIsAnimating] = useState(false);
-  const slideAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setIsAnimating(true);
-      // Animate out (down)
-      Animated.timing(slideAnim, {
-        toValue: 1,
-        duration: 220,
-        useNativeDriver: true,
-      }).start(() => {
-        // After out, update text and animate in
-        setDisplayedIndex((prev) => (prev + 1) % foodNames.length);
-        setPlaceholderIndex((prev) => (prev + 1) % foodNames.length);
-        slideAnim.setValue(-1); // Start new text above
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 220,
-          useNativeDriver: true,
-        }).start(() => {
-          setIsAnimating(false);
-        });
-      });
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [placeholderIndex]);
+  // Static placeholder text
+  const placeholderText = "Search your favourite food here...";
 
   // Extract sizes
   const sizes = item.sizes || [];
@@ -86,7 +47,16 @@ const FoodDetailScreen = () => {
 
   useEffect(() => {
     fetchReviews();
+    // Clear search text when component mounts
+    setSearchText('');
   }, [item.id]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    setSearchText(''); // Clear search text on refresh
+    await fetchReviews();
+    setRefreshing(false);
+  };
 
   const fetchReviews = async () => {
     try {
@@ -292,33 +262,9 @@ const FoodDetailScreen = () => {
         </TouchableOpacity>
         <View style={styles.headerSearchBox}>
           <Ionicons name="search-outline" size={20} color="#888" style={styles.headerSearchIcon} />
-          <View style={styles.animatedPlaceholderContainer} pointerEvents="none">
-            <Animated.Text
-              style={[
-                styles.animatedPlaceholder,
-                {
-                  transform: [
-                    {
-                      translateY: slideAnim.interpolate({
-                        inputRange: [-1, 0, 1],
-                        outputRange: [-32, 0, 32],
-                      }),
-                    },
-                  ],
-                  opacity: slideAnim.interpolate({
-                    inputRange: [-1, 0, 1],
-                    outputRange: [0, 1, 0],
-                  }),
-                },
-              ]}
-              numberOfLines={1}
-            >
-              {`Search ${foodNames[displayedIndex]}...`}
-            </Animated.Text>
-          </View>
           <TextInput
-            style={[styles.headerSearchInput, { position: 'absolute', left: 0, right: 0, width: '100%' }]}
-            placeholder=""
+            style={styles.headerSearchInput}
+            placeholder={placeholderText}
             value={searchText}
             onChangeText={setSearchText}
             underlineColorAndroid="transparent"
@@ -377,7 +323,19 @@ const FoodDetailScreen = () => {
   return (
     <SafeAreaView style={styles.safeArea} edges={["top","left","right"]}>
       {renderHeader()}
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.container} 
+        contentContainerStyle={styles.scrollContent} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#FF6B35']}
+            tintColor="#FF6B35"
+          />
+        }
+      >
         <View style={styles.imageContainer}>
           <Image source={{ uri: item.image }} style={styles.image} />
         </View>
@@ -875,23 +833,7 @@ const styles = StyleSheet.create({
     color: '#333',
     minWidth: 0,
   },
-  animatedPlaceholderContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    position: 'relative',
-    height: 32,
-    overflow: 'hidden',
-  },
-  animatedPlaceholder: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    color: '#888',
-    fontSize: 18,
-    paddingLeft: 0,
-    paddingRight: 0,
-    textAlignVertical: 'center',
-  },
+
   pillBtnContent: {
     flexDirection: 'row',
     alignItems: 'center',

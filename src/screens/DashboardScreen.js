@@ -14,7 +14,6 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
-  Animated,
   Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -37,8 +36,6 @@ const DashboardScreen = ({ username }) => {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [categories, setCategories] = useState([]);
   const [profileImage, setProfileImage] = useState(null);
-  const [displayedIndex, setDisplayedIndex] = useState(0);
-  const [isAnimating, setIsAnimating] = useState(false);
   const [userName, setUserName] = useState('');
   const [isFilterVisible, setIsFilterVisible] = useState(false);
   const [filters, setFilters] = useState({
@@ -52,44 +49,9 @@ const DashboardScreen = ({ username }) => {
     sortBy: 'default'
   });
   const [searchQuery, setSearchQuery] = useState('');
-  const slideAnim = React.useRef(new Animated.Value(0)).current;
 
-  // Dynamic placeholder cycling through food names
-  const foodNames = [
-    'Pizza',
-    'Burger',
-    'Biryani',
-    'Pasta',
-    'Sushi',
-    'Tacos',
-    'Dosa',
-    'Paneer',
-    'Noodles',
-    'Salad',
-  ];
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setIsAnimating(true);
-      // Animate out (down)
-      Animated.timing(slideAnim, {
-        toValue: 1,
-        duration: 220,
-        useNativeDriver: true,
-      }).start(() => {
-        // After out, update text and animate in
-        setDisplayedIndex((prev) => (prev + 1) % foodNames.length);
-        slideAnim.setValue(-1); // Start new text above
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 220,
-          useNativeDriver: true,
-        }).start(() => {
-          setIsAnimating(false);
-        });
-      });
-    }, 2000);
-    return () => clearInterval(interval);
-  }, []);
+  // Static placeholder text
+  const placeholderText = "Search your favourite food here...";
 
   useEffect(() => {
     console.log('Category changed to:', selectedCategory);
@@ -117,6 +79,8 @@ const DashboardScreen = ({ username }) => {
         }
       };
       fetchProfile();
+      // Clear search text when screen comes into focus
+      setSearchQuery('');
     }, [])
   );
 
@@ -327,6 +291,7 @@ const DashboardScreen = ({ username }) => {
 
   const onRefresh = async () => {
     setRefreshing(true);
+    setSearchQuery(''); // Clear search text on refresh
     await fetchFoodItems();
     setRefreshing(false);
   };
@@ -349,7 +314,7 @@ const DashboardScreen = ({ username }) => {
           <Ionicons name="search-outline" size={20} color="#888" style={{ marginRight: 8 }} />
           <TextInput
             style={styles.searchInput}
-            placeholder={`Search ${foodNames[displayedIndex]}...`}
+            placeholder={placeholderText}
             value={searchQuery}
             onChangeText={setSearchQuery}
             onSubmitEditing={() => applyFilters()}
@@ -551,7 +516,7 @@ const DashboardScreen = ({ username }) => {
       >
         {renderHeader()}
         <View style={styles.sectionRow}>
-          <Text style={styles.sectionTitle}>Best Seller</Text>
+          <Text style={styles.sectionTitle}>Top Rated Food</Text>
           <TouchableOpacity onPress={handleViewAllBestSellers}>
             <Text style={styles.sectionViewAll}>View All</Text>
           </TouchableOpacity>
@@ -564,6 +529,10 @@ const DashboardScreen = ({ username }) => {
                 source={{ uri: bestSeller.image }}
                 style={styles.featuredImage}
               />
+              {/* Food name overlay at the bottom */}
+              <View style={styles.featuredNameOverlay}>
+                <Text style={styles.featuredNameText}>{bestSeller.name}</Text>
+              </View>
               {/* Average rating star and value top left */}
               <View style={styles.featuredStar}>
                 <Ionicons name="star" size={18} color="#FFB300" />
@@ -575,11 +544,6 @@ const DashboardScreen = ({ username }) => {
               <TouchableOpacity style={styles.featuredCartOverlay} onPress={(e) => { e.stopPropagation(); handleAddToCart(bestSeller); }}>
                 <Ionicons name="cart-outline" size={22} color="#FF6B35" />
               </TouchableOpacity>
-            </View>
-            <View style={styles.featuredInfoRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.featuredTitle}>{bestSeller.name}</Text>
-              </View>
             </View>
           </TouchableOpacity>
         )}
@@ -631,7 +595,7 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     backgroundColor: '#fff',
-    paddingTop: 4,
+    paddingTop: 0,
     paddingBottom: 4,
     paddingHorizontal: 16,
     borderBottomWidth: 0,
@@ -747,33 +711,30 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 2,
-    paddingBottom: 12,
   },
   featuredImage: {
     width: '100%',
-    height: 170,
+    height: 195,
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
-    marginBottom: 10,
   },
-  featuredInfoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 8,
-    marginBottom: 0,
+  featuredNameOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    zIndex: 1,
   },
-  featuredTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#222',
-    marginRight: 6,
-    flex: 1,
-    flexShrink: 1,
-    minWidth: 0,
-    paddingVertical: 0,
-    paddingHorizontal: 0,
+  featuredNameText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#fff',
+    textAlign: 'left',
   },
+
   featuredRatingRow: {
     flexDirection: 'row',
     alignItems: 'center',

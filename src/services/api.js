@@ -6,7 +6,7 @@ const API_BASE_URL = 'http://192.168.1.90:8000';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 60000, // Increased timeout to 60 seconds for email sending
   headers: {
     'Content-Type': 'application/json',
   },
@@ -140,6 +140,35 @@ export const authApi = {
       });
     } catch (error) {
       console.error('Change password error:', error);
+      throw error;
+    }
+  },
+  forgotPassword: async (email) => {
+    try {
+      console.log('Sending forgot password request for email:', email);
+      const response = await api.post('/api/forgot-password/', {
+        email: email,
+      });
+      console.log('Forgot password response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+      throw error;
+    }
+  },
+  resetPassword: async (email, otp, newPassword, confirmPassword) => {
+    try {
+      const response = await api.post('/api/reset-password/', {
+        email: email,
+        otp: otp,
+        new_password: newPassword,
+        confirm_password: confirmPassword,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Reset password error:', error);
       throw error;
     }
   },

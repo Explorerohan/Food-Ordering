@@ -11,6 +11,8 @@ import LoginScreen from './src/screens/LoginScreen';
 import SignupScreen from './src/screens/SignupScreen';
 import EditProfileScreen from './src/screens/EditProfileScreen';
 import ChangePasswordScreen from './src/screens/ChangePasswordScreen';
+import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
+import OTPVerificationScreen from './src/screens/OTPVerificationScreen';
 import { authApi } from './src/services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, View, StyleSheet, ActivityIndicator, Text, TouchableOpacity, SafeAreaView, Image, Alert, LogBox } from 'react-native';
@@ -304,6 +306,8 @@ export default function App() {
                     <Stack.Screen name="Signup">
                       {props => <SignupScreen {...props} onSignup={(...args) => handleSignup(...args, props.navigation)} />}
                     </Stack.Screen>
+                    <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+                    <Stack.Screen name="OTPVerification" component={OTPVerificationScreen} />
                   </>
                 ) : (
                   <>

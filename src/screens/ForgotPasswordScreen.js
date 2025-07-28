@@ -16,6 +16,9 @@ import { authApi } from '../services/api';
 const ForgotPasswordScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // Debug log for loading state
+  console.log('Current loading state:', loading);
 
   const handleForgotPassword = async () => {
     if (!email) {
@@ -30,28 +33,37 @@ const ForgotPasswordScreen = ({ navigation }) => {
       return;
     }
 
+    console.log('Starting forgot password process...');
     setLoading(true);
+    
     try {
-      await authApi.forgotPassword(email);
+      console.log('Calling forgotPassword API...');
+      const result = await authApi.forgotPassword(email);
+      console.log('API call successful:', result);
       
       Alert.alert(
-        'Email Sent', 
-        'If an account with this email exists, you will receive a password reset link shortly. Please check your email and follow the instructions.',
+        'Success', 
+        'OTP has been sent to your email address.',
         [
           { 
             text: 'OK', 
             onPress: () => {
-              setEmail('');
-              navigation.goBack();
+              navigation.navigate('OTPVerification', { email: email });
             }
           }
         ]
       );
     } catch (error) {
       console.error('Forgot password error:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
       const errorMessage = error.response?.data?.error || 'Failed to send reset email. Please try again.';
       Alert.alert('Error', errorMessage);
     } finally {
+      console.log('Setting loading to false');
       setLoading(false);
     }
   };
@@ -77,7 +89,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
           
           <Text style={styles.title}>Reset Your Password</Text>
           <Text style={styles.description}>
-            Enter your email address and we'll send you a link to reset your password.
+            Enter your email address and we'll send you an OTP to reset your password.
           </Text>
 
           {/* Email Input */}
@@ -103,14 +115,18 @@ const ForgotPasswordScreen = ({ navigation }) => {
             style={[styles.submitButton, loading && styles.submitButtonDisabled]}
             onPress={handleForgotPassword}
             disabled={loading}
+            activeOpacity={loading ? 0.7 : 0.8}
           >
             {loading ? (
-              <ActivityIndicator color="#fff" size="small" />
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator color="#fff" size="small" />
+                <Text style={styles.loadingText}>Sending OTP...</Text>
+              </View>
             ) : (
-              <Text style={styles.submitButtonText}>Send Reset Link</Text>
+              <Text style={styles.submitButtonText}>Send OTP</Text>
             )}
           </TouchableOpacity>
-
+          
           {/* Back to Login */}
           <TouchableOpacity 
             style={styles.backToLoginButton}
@@ -129,7 +145,10 @@ const ForgotPasswordScreen = ({ navigation }) => {
               • Make sure you're using the email associated with your account
             </Text>
             <Text style={styles.helpText}>
-              • The reset link expires in 24 hours
+              • The OTP expires in 10 minutes
+            </Text>
+            <Text style={styles.helpText}>
+              • You can resend the OTP if needed
             </Text>
           </View>
         </View>
@@ -231,14 +250,25 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   submitButtonDisabled: {
-    backgroundColor: '#ccc',
-    shadowOpacity: 0,
-    elevation: 0,
+    backgroundColor: '#FF6B35', // Keep the same color when loading
+    shadowOpacity: 0.1,
+    elevation: 1,
   },
   submitButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 8,
   },
   backToLoginButton: {
     paddingVertical: 12,

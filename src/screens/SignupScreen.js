@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, SafeAreaView, ImageBackground } from 'react-native';
 import { SafeAreaView as SafeAreaViewContext } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 
 const SignupScreen = ({ navigation, onSignup }) => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
 
   const handleSignup = async () => {
@@ -54,14 +56,26 @@ const SignupScreen = ({ navigation, onSignup }) => {
             keyboardType="phone-pad"
             placeholderTextColor="#aaa"
           />
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            placeholderTextColor="#aaa"
-          />
+          <View style={styles.passwordContainer}>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Password"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              placeholderTextColor="#aaa"
+            />
+            <TouchableOpacity
+              style={styles.eyeButton}
+              onPress={() => setShowPassword(!showPassword)}
+            >
+              <Ionicons 
+                name={showPassword ? "eye-off" : "eye"} 
+                size={20} 
+                color="#666" 
+              />
+            </TouchableOpacity>
+          </View>
           <TouchableOpacity style={styles.signupButton} onPress={handleSignup}>
             <Text style={styles.signupButtonText}>Sign Up</Text>
           </TouchableOpacity>
@@ -120,6 +134,25 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     fontSize: 16,
     color: '#222',
+  },
+  passwordContainer: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 12,
+    backgroundColor: '#fff',
+    marginBottom: 16,
+  },
+  passwordInput: {
+    flex: 1,
+    padding: 14,
+    fontSize: 16,
+    color: '#222',
+  },
+  eyeButton: {
+    padding: 14,
   },
   error: {
     color: '#FF6B35',

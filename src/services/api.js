@@ -126,6 +126,23 @@ export const authApi = {
       throw error;
     }
   },
+  changePassword: async (currentPassword, newPassword, confirmPassword) => {
+    try {
+      return await apiCallWithAutoRefresh(async (accessToken) => {
+        const response = await api.put('/api/change-password/', {
+          current_password: currentPassword,
+          new_password: newPassword,
+          confirm_password: confirmPassword,
+        }, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        return response.data;
+      });
+    } catch (error) {
+      console.error('Change password error:', error);
+      throw error;
+    }
+  },
 };
 
 // Profile API service

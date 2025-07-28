@@ -77,6 +77,7 @@ function ProfileScreen({ navigation, onLogout }) {
         <MenuItem icon="gift-outline" label="My Promocodes" onPress={() => {}} />
         <MenuItem icon="heart-outline" label="My Orders" onPress={() => navigation.navigate('MyOrders')} />
         <MenuItem icon="map-outline" label="Track your order" onPress={() => {}} />
+        <MenuItem icon="lock-closed-outline" label="Change Password" onPress={() => navigation.navigate('ChangePassword')} color="#4CAF50" />
         <MenuItem icon="chatbubble-ellipses-outline" label="24 hrs Support" onPress={() => navigation.navigate('ChatScreen')} color="#2196F3" />
         <MenuItem icon="log-out-outline" label="Sign Out" onPress={() => onLogout(navigation)} color="#FF6B35" />
       </View>

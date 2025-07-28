@@ -10,6 +10,7 @@ import AllFoodScreen from './src/screens/AllFoodScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import SignupScreen from './src/screens/SignupScreen';
 import EditProfileScreen from './src/screens/EditProfileScreen';
+import ChangePasswordScreen from './src/screens/ChangePasswordScreen';
 import { authApi } from './src/services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, View, StyleSheet, ActivityIndicator, Text, TouchableOpacity, SafeAreaView, Image, Alert, LogBox } from 'react-native';
@@ -313,6 +314,7 @@ export default function App() {
                     <Stack.Screen name="EditProfile">
                       {props => <EditProfileScreen {...props} onProfileUpdate={fetchAndStoreProfileDetails} />}
                     </Stack.Screen>
+                    <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
                     <Stack.Screen name="CartDetails" component={CartDetails} />
                     <Stack.Screen name="OrderConfirmationScreen" component={OrderConfirmationScreen} />
                     <Stack.Screen name="OrderHistoryScreen" component={OrderHistoryScreen} />

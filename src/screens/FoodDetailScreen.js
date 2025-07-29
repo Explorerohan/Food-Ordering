@@ -7,6 +7,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { reviewsApi } from '../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiCallWithAutoRefresh } from '../services/api';
+import { getApiUrl, API_ENDPOINTS } from '../config/apiConfig';
 
 const { width } = Dimensions.get('window');
 
@@ -81,7 +82,7 @@ const FoodDetailScreen = () => {
       };
       
       console.log('Cart API request body:', requestBody);
-      console.log('Cart API endpoint:', 'http://192.168.1.90:8000/api/cart/');
+      console.log('Cart API endpoint:', getApiUrl(API_ENDPOINTS.CART));
       console.log('Item ID:', item.id);
       console.log('Item name:', item.name);
       console.log('Selected size:', selectedSize);
@@ -89,7 +90,7 @@ const FoodDetailScreen = () => {
       console.log('Quantity:', quantity);
       
       const cartData = await apiCallWithAutoRefresh(async (accessToken) => {
-                 const response = await fetch('http://192.168.1.90:8000/api/cart/', {
+                 const response = await fetch(getApiUrl(API_ENDPOINTS.CART), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -199,7 +200,7 @@ const FoodDetailScreen = () => {
       }
 
       // Use fetch for FormData
-              const response = await fetch('http://192.168.1.90:8000/api/reviews/', {
+              const response = await fetch(getApiUrl(API_ENDPOINTS.REVIEWS), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -398,9 +399,9 @@ const FoodDetailScreen = () => {
                         <View style={styles.reviewImageCommentRow}>
                           <Text style={[styles.reviewComment, { flex: 1 }]}>{review.comment}</Text>
                           {review.image && typeof review.image === 'string' && review.image.length > 0 && (
-                                                          <TouchableOpacity onPress={() => handleReviewImagePress(review.image.startsWith('http') ? review.image : `http://192.168.1.90${review.image}`)}>
+                                                          <TouchableOpacity onPress={() => handleReviewImagePress(review.image.startsWith('http') ? review.image : getApiUrl(review.image))}>
                               <Image
-                                                                  source={{ uri: review.image.startsWith('http') ? review.image : `http://192.168.1.90${review.image}` }}
+                                                                  source={{ uri: review.image.startsWith('http') ? review.image : getApiUrl(review.image) }}
                                 style={styles.reviewImageSmall}
                               />
                             </TouchableOpacity>

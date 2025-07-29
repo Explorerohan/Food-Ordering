@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView as SafeAreaViewContext } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { fetchWithAutoRefresh } from '../services/api';
+import { getApiUrl, API_ENDPOINTS } from '../config/apiConfig';
 
 const OrderDetailScreen = ({ route, navigation }) => {
   const { orderId } = route.params;
@@ -18,7 +19,7 @@ const OrderDetailScreen = ({ route, navigation }) => {
     try {
       setLoading(true);
       const response = await fetchWithAutoRefresh(async (accessToken) => {
-        return await fetch(`http://192.168.1.90:8000/api/orders/${orderId}/`, {
+        return await fetch(getApiUrl(`${API_ENDPOINTS.ORDERS}${orderId}/`), {
           headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {},
         });
       });

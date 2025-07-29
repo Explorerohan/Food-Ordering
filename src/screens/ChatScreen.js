@@ -5,8 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView as SafeAreaViewContext } from 'react-native-safe-area-context';
-
-const BACKEND_URL = 'http://192.168.1.90:8000'; // Replace with your backend URL
+import { getApiUrl, getWsUrl, API_ENDPOINTS } from '../config/apiConfig';
 
 const ChatScreen = () => {
   const { user, token, loading } = useContext(AuthContext); // user: { id, username, is_admin }
@@ -40,12 +39,12 @@ const ChatScreen = () => {
   // Fetch chat history
   const fetchChatHistory = async () => {
     try {
-      const res = await fetch(`${BACKEND_URL}/api/chat/history/${roomName}/`, {
+      const res = await fetch(getApiUrl(`/api/chat/history/${roomName}/`), {
         headers: { Authorization: `Bearer ${token}` }, // Try 'Bearer' first
       });
       if (res.status === 401) {
         // Try with 'Token' prefix if 'Bearer' fails
-        const res2 = await fetch(`${BACKEND_URL}/api/chat/history/${roomName}/`, {
+        const res2 = await fetch(getApiUrl(`/api/chat/history/${roomName}/`), {
           headers: { Authorization: `Token ${token}` },
         });
         const data = await res2.json();
@@ -71,7 +70,7 @@ const ChatScreen = () => {
       console.log('No token available for WebSocket connection');
       return;
     }
-    ws.current = new WebSocket(`ws://192.168.1.90:8000/ws/chat/${roomName}/?token=${token}`);
+    ws.current = new WebSocket(getWsUrl(`/ws/chat/${roomName}/?token=${token}`));
     ws.current.onopen = () => { console.log('WebSocket opened'); };
     ws.current.onmessage = (e) => {
       const data = JSON.parse(e.data);

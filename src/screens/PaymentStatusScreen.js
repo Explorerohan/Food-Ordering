@@ -3,6 +3,7 @@ import { View, Text, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { fetchWithAutoRefresh } from '../services/api';
+import { getApiUrl, API_ENDPOINTS } from '../config/apiConfig';
 
 const PaymentStatusScreen = () => {
   const navigation = useNavigation();
@@ -28,7 +29,7 @@ const PaymentStatusScreen = () => {
         }));
         // Create order
         const response = await fetchWithAutoRefresh(async (accessToken) => {
-          return await fetch('http://192.168.1.90:8000/api/orders/', {
+          return await fetch(getApiUrl(API_ENDPOINTS.ORDERS), {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -52,7 +53,7 @@ const PaymentStatusScreen = () => {
         }
         // Clear cart
         await fetchWithAutoRefresh(async (accessToken) => {
-          return await fetch('http://192.168.1.90:8000/api/cart/clear/', {
+          return await fetch(getApiUrl(API_ENDPOINTS.CART_CLEAR), {
             method: 'DELETE',
             headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {},
           });

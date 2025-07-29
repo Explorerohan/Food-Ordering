@@ -1,8 +1,8 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL, API_ENDPOINTS, getApiUrl } from '../config/apiConfig';
 
 // Base API configuration
-const API_BASE_URL = 'http://192.168.1.90:8000';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -68,7 +68,7 @@ export const reviewsApi = {
   getReviewsByFoodId: async (foodId) => {
     try {
       return await apiCallWithAutoRefresh(async (accessToken) => {
-        const response = await api.get(`/api/reviews/?food_item=${foodId}`, {
+        const response = await api.get(`${API_ENDPOINTS.REVIEWS}?food_item=${foodId}`, {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
         return response.data;
@@ -84,7 +84,7 @@ export const reviewsApi = {
         const headers = { Authorization: `Bearer ${accessToken}` };
         // Use axios.post directly for FormData to avoid base config issues
         const response = await axios.post(
-          API_BASE_URL + '/api/reviews/',
+          getApiUrl(API_ENDPOINTS.REVIEWS),
           reviewData,
           { headers }
         );
@@ -101,7 +101,7 @@ export const reviewsApi = {
 export const authApi = {
   login: async (username, password) => {
     try {
-      const response = await api.post('/api/token/', { username, password });
+      const response = await api.post(API_ENDPOINTS.LOGIN, { username, password });
       return response.data;
     } catch (error) {
       console.error('Login error:', error);
@@ -110,7 +110,7 @@ export const authApi = {
   },
   signup: async (username, email, phoneNumber, password) => {
     try {
-      const response = await api.post('/api/register/', { username, email, phone_number: phoneNumber, password });
+      const response = await api.post(API_ENDPOINTS.REGISTER, { username, email, phone_number: phoneNumber, password });
       return response.data;
     } catch (error) {
       console.error('Signup error:', error);
@@ -119,7 +119,7 @@ export const authApi = {
   },
   refreshToken: async (refresh) => {
     try {
-      const response = await api.post('/api/token/refresh/', { refresh });
+      const response = await api.post(API_ENDPOINTS.REFRESH_TOKEN, { refresh });
       return response.data;
     } catch (error) {
       console.error('Refresh token error:', error);
@@ -129,7 +129,7 @@ export const authApi = {
   changePassword: async (currentPassword, newPassword, confirmPassword) => {
     try {
       return await apiCallWithAutoRefresh(async (accessToken) => {
-        const response = await api.put('/api/change-password/', {
+        const response = await api.put(API_ENDPOINTS.CHANGE_PASSWORD, {
           current_password: currentPassword,
           new_password: newPassword,
           confirm_password: confirmPassword,
@@ -146,7 +146,7 @@ export const authApi = {
   forgotPassword: async (email) => {
     try {
       console.log('Sending forgot password request for email:', email);
-      const response = await api.post('/api/forgot-password/', {
+      const response = await api.post(API_ENDPOINTS.FORGOT_PASSWORD, {
         email: email,
       });
       console.log('Forgot password response:', response.data);
@@ -160,7 +160,7 @@ export const authApi = {
   },
   resetPassword: async (email, otp, newPassword, confirmPassword) => {
     try {
-      const response = await api.post('/api/reset-password/', {
+      const response = await api.post(API_ENDPOINTS.RESET_PASSWORD, {
         email: email,
         otp: otp,
         new_password: newPassword,
@@ -174,7 +174,7 @@ export const authApi = {
   },
   verifyOTP: async (email, otp) => {
     try {
-      const response = await api.post('/api/verify-otp/', {
+      const response = await api.post(API_ENDPOINTS.VERIFY_OTP, {
         email: email,
         otp: otp,
       });
@@ -191,7 +191,7 @@ export const profileApi = {
   getProfile: async () => {
     try {
       return await apiCallWithAutoRefresh(async (accessToken) => {
-        const response = await api.get('/api/profile/me/', {
+        const response = await api.get(API_ENDPOINTS.PROFILE, {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
         return response.data;
@@ -218,7 +218,7 @@ export const profileApi = {
           });
         }
         const response = await axios.patch(
-          api.defaults.baseURL + '/api/profile/me/',
+          getApiUrl(API_ENDPOINTS.PROFILE),
           formData,
           {
             headers: {
@@ -240,7 +240,7 @@ export const profileApi = {
 export const refreshAccessToken = async () => {
   const refreshToken = await AsyncStorage.getItem('refreshToken');
   if (!refreshToken) throw new Error('No refresh token found');
-  const response = await axios.post(`${API_BASE_URL}/api/token/refresh/`, { refresh: refreshToken });
+  const response = await axios.post(getApiUrl(API_ENDPOINTS.REFRESH_TOKEN), { refresh: refreshToken });
   const newAccessToken = response.data.access;
   await AsyncStorage.setItem('accessToken', newAccessToken);
   return newAccessToken;

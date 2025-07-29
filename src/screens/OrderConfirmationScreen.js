@@ -4,13 +4,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView as SafeAreaViewContext } from 'react-native-safe-area-context';
+import { getApiUrl, API_ENDPOINTS } from '../config/apiConfig';
 
 // Helper function to refresh access token
 const refreshAccessToken = async () => {
   const refreshToken = await AsyncStorage.getItem('refreshToken');
   if (!refreshToken) return null;
   try {
-    const response = await fetch('http://192.168.1.90:8000/api/token/refresh/', {
+    const response = await fetch(getApiUrl(API_ENDPOINTS.REFRESH_TOKEN), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh: refreshToken }),
@@ -66,7 +67,7 @@ const OrderConfirmationScreen = () => {
         setTotalAmount(0);
         return;
       }
-      let response = await fetch('http://192.168.1.90:8000/api/cart/', {
+      let response = await fetch(getApiUrl(API_ENDPOINTS.CART), {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -76,7 +77,7 @@ const OrderConfirmationScreen = () => {
       if (data.code === 'token_not_valid') {
         token = await refreshAccessToken();
         if (token) {
-          response = await fetch('http://192.168.1.90:8000/api/cart/', {
+          response = await fetch(getApiUrl(API_ENDPOINTS.CART), {
             headers: {
               'Authorization': `Bearer ${token}`,
             },

@@ -25,8 +25,7 @@ import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import FoodItemCard from '../components/FoodItemCard';
 import CategoryFilter from '../components/CategoryFilter';
 import { foodApi, mockFoodData, profileApi } from '../services/api';
-
-const API_BASE_URL = 'http://192.168.1.90:8000';
+import { getApiUrl, API_ENDPOINTS } from '../config/apiConfig';
 
 const DashboardScreen = ({ username }) => {
   const navigation = useNavigation();
@@ -252,7 +251,7 @@ const DashboardScreen = ({ username }) => {
       }
       const spice_level = 'Mild';
       const accessToken = await AsyncStorage.getItem('accessToken');
-      const response = await fetch('http://192.168.1.90:8000/api/cart/', {
+      const response = await fetch(getApiUrl(API_ENDPOINTS.CART), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -275,7 +274,7 @@ const DashboardScreen = ({ username }) => {
     // Map food items to ensure correct image URL and fields
     let imageUrl = item.image;
     if (imageUrl && !imageUrl.startsWith('http')) {
-      imageUrl = API_BASE_URL + imageUrl;
+      imageUrl = getApiUrl(imageUrl);
     }
     
     const mappedItem = {

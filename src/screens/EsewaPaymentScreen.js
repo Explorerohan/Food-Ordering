@@ -4,6 +4,7 @@ import { WebView } from 'react-native-webview';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fetchWithAutoRefresh } from '../services/api';
+import { getApiUrl, API_ENDPOINTS } from '../config/apiConfig';
 import Ionicons from 'react-native-vector-icons/Ionicons'; // Added for success icon
 
 // Mock eSewa Payment Page for Testing
@@ -229,7 +230,7 @@ const EsewaPaymentScreen = () => {
 
         // Create order using the cart checkout endpoint
         const response = await fetchWithAutoRefresh(async (accessToken) => {
-          return await fetch('http://192.168.1.90:8000/api/orders/', {
+          return await fetch(getApiUrl(API_ENDPOINTS.ORDERS), {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -254,7 +255,7 @@ const EsewaPaymentScreen = () => {
 
         // Clear the cart after successful order
         await fetchWithAutoRefresh(async (accessToken) => {
-          return await fetch('http://192.168.1.90:8000/api/cart/clear/', {
+          return await fetch(getApiUrl(API_ENDPOINTS.CART_CLEAR), {
             method: 'DELETE',
             headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {},
           });
@@ -300,7 +301,7 @@ const EsewaPaymentScreen = () => {
 
       // Create order using the cart checkout endpoint
       const response = await fetchWithAutoRefresh(async (accessToken) => {
-        return await fetch('http://192.168.1.90:8000/api/orders/', {
+        return await fetch(getApiUrl(API_ENDPOINTS.ORDERS), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -323,13 +324,13 @@ const EsewaPaymentScreen = () => {
         throw new Error('Failed to create order');
       }
 
-      // Clear the cart after successful order
-      await fetchWithAutoRefresh(async (accessToken) => {
-        return await fetch('http://192.168.1.90:8000/api/cart/clear/', {
-          method: 'DELETE',
-          headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {},
+              // Clear the cart after successful order
+        await fetchWithAutoRefresh(async (accessToken) => {
+          return await fetch(getApiUrl(API_ENDPOINTS.CART_CLEAR), {
+            method: 'DELETE',
+            headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {},
+          });
         });
-      });
 
       setProcessing(false); // Hide spinner
       setShowSuccess(true); // Show success message and wait for user action

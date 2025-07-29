@@ -6,6 +6,7 @@ import { SafeAreaView as SafeAreaViewContext } from 'react-native-safe-area-cont
 import { useFocusEffect } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { fetchWithAutoRefresh } from '../services/api';
+import { getApiUrl, API_ENDPOINTS } from '../config/apiConfig';
 
 const OrderHistoryScreen = ({ navigation }) => {
   const [orders, setOrders] = useState([]);
@@ -15,7 +16,7 @@ const OrderHistoryScreen = ({ navigation }) => {
     try {
       setLoading(true);
       const response = await fetchWithAutoRefresh(async (accessToken) => {
-        return await fetch('http://192.168.1.90:8000/api/orders/', {
+        return await fetch(getApiUrl(API_ENDPOINTS.ORDERS), {
           headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {},
         });
       });

@@ -14,6 +14,7 @@ import ChangePasswordScreen from './src/screens/ChangePasswordScreen';
 import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
 import OTPVerificationScreen from './src/screens/OTPVerificationScreen';
 import { authApi } from './src/services/api';
+import { getApiUrl, API_ENDPOINTS } from './src/config/apiConfig';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, View, StyleSheet, ActivityIndicator, Text, TouchableOpacity, SafeAreaView, Image, Alert, LogBox } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -109,7 +110,7 @@ export default function App() {
       }
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 7000); // 7 seconds
-      const res = await fetch('http://192.168.1.90:8000/api/profile/me/', {
+      const res = await fetch(getApiUrl(API_ENDPOINTS.PROFILE), {
         headers: { 'Authorization': `Bearer ${token}` },
         signal: controller.signal,
       });
@@ -188,7 +189,7 @@ export default function App() {
       await AsyncStorage.setItem('accessToken', token);
       await AsyncStorage.setItem('refreshToken', refresh);
       // Fetch user profile
-      const profileRes = await fetch('http://192.168.1.90:8000/api/profile/me/', {
+      const profileRes = await fetch(getApiUrl(API_ENDPOINTS.PROFILE), {
         headers: { 'Authorization': `Bearer ${token}` },
       });
       const data = await profileRes.json();

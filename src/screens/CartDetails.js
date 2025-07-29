@@ -6,6 +6,7 @@ import { SafeAreaView as SafeAreaViewContext } from 'react-native-safe-area-cont
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { fetchWithAutoRefresh } from '../services/api';
+import { getApiUrl, API_ENDPOINTS } from '../config/apiConfig';
 import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
@@ -86,7 +87,7 @@ const CartDetails = ({ navigation, route }) => {
       }
       
       const response = await fetchWithAutoRefresh(async (accessToken) => {
-        return await fetch('http://192.168.1.90:8000/api/cart/', {
+        return await fetch(getApiUrl(API_ENDPOINTS.CART), {
           headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {},
         });
       });
@@ -151,7 +152,7 @@ const CartDetails = ({ navigation, route }) => {
       }));
 
       const response = await fetchWithAutoRefresh(async (accessToken) => {
-        return await fetch('http://192.168.1.90:8000/api/orders/', {
+        return await fetch(getApiUrl(API_ENDPOINTS.ORDERS), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -202,7 +203,7 @@ const CartDetails = ({ navigation, route }) => {
   const clearCart = async () => {
     try {
       const response = await fetchWithAutoRefresh(async (accessToken) => {
-        return await fetch('http://192.168.1.90:8000/api/cart/clear/', {
+        return await fetch(getApiUrl(API_ENDPOINTS.CART_CLEAR), {
           method: 'DELETE',
           headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {},
         });
@@ -245,7 +246,7 @@ const CartDetails = ({ navigation, route }) => {
         <View style={styles.itemImageContainer}>
           {foodImage ? (
             <Image 
-                              source={{ uri: foodImage.startsWith('http') ? foodImage : `http://192.168.1.90${foodImage}` }} 
+                              source={{ uri: foodImage.startsWith('http') ? foodImage : getApiUrl(foodImage) }} 
               style={styles.itemImage} 
             />
           ) : (

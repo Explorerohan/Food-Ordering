@@ -9,7 +9,7 @@ Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
     shouldPlaySound: true,
-    shouldSetBadge: true,
+    shouldSetBadge: true, 
   }),
 });
 
@@ -48,7 +48,6 @@ class NotificationService {
           await AsyncStorage.setItem('expoPushToken', this.expoPushToken);
         } catch (error) {
           console.log('Push token not available (likely using Expo Go):', error.message);
-          console.log('Local notifications will still work for testing');
         }
       }
 
@@ -69,12 +68,6 @@ class NotificationService {
   async checkNotificationStatus() {
     try {
       const { status } = await Notifications.getPermissionsAsync();
-      console.log('=== NOTIFICATION STATUS ===');
-      console.log('Permission status:', status);
-      console.log('Device is device:', Device.isDevice);
-      console.log('Push token available:', !!this.expoPushToken);
-      console.log('Notifications count:', this.notifications.length);
-      console.log('==========================');
       return status;
     } catch (error) {
       console.error('Error checking notification status:', error);
@@ -112,12 +105,6 @@ class NotificationService {
 
   // Handle received notification
   async handleNotificationReceived(notification) {
-    console.log('=== NOTIFICATION RECEIVED ===');
-    console.log('Notification:', notification);
-    console.log('Title:', notification.request.content.title);
-    console.log('Body:', notification.request.content.body);
-    console.log('Data:', notification.request.content.data);
-    
     const notificationData = {
       id: notification.request.identifier,
       title: notification.request.content.title,
@@ -129,12 +116,10 @@ class NotificationService {
     };
 
     await this.addNotification(notificationData);
-    console.log('=== NOTIFICATION PROCESSED ===');
   }
 
   // Handle notification tap
   async handleNotificationResponse(response) {
-    console.log('Notification tapped:', response);
     const notificationId = response.notification.request.identifier;
     
     // Mark as read
@@ -153,8 +138,6 @@ class NotificationService {
   // Show local notification
   async showLocalNotification(title, body, data = {}) {
     try {
-      console.log('Showing local notification:', { title, body, data });
-      
       const notificationId = await Notifications.scheduleNotificationAsync({
         content: {
           title,
@@ -164,8 +147,6 @@ class NotificationService {
         },
         trigger: null, // Show immediately
       });
-
-      console.log('Notification scheduled with ID:', notificationId);
 
       const notificationData = {
         id: notificationId,
@@ -178,7 +159,6 @@ class NotificationService {
       };
 
       await this.addNotification(notificationData);
-      console.log('Notification added to local storage');
       return notificationId;
     } catch (error) {
       console.error('Error showing local notification:', error);
@@ -188,6 +168,12 @@ class NotificationService {
 
   // Show order confirmation notification
   async showOrderConfirmation(orderId, orderDetails) {
+    // Check if notifications are enabled
+    const notificationsEnabled = await this.checkNotificationsEnabled();
+    if (!notificationsEnabled) {
+      return false;
+    }
+
     const title = `Order Confirmed! 🎉`;
     const body = `Your order #${orderId} has been placed successfully. We'll notify you when it's ready!`;
     
@@ -200,6 +186,13 @@ class NotificationService {
 
   // Show order status update notification
   async showOrderStatusUpdate(orderId, status, message) {
+    // Check if notifications are enabled
+    const notificationsEnabled = await this.checkNotificationsEnabled();
+    if (!notificationsEnabled) {
+      console.log('Notifications disabled - skipping order status update notification');
+      return false;
+    }
+
     const statusEmojis = {
       'preparing': '👨‍🍳',
       'out_for_delivery': '🚚',
@@ -220,6 +213,13 @@ class NotificationService {
 
   // Show payment success notification
   async showPaymentSuccess(orderId, amount) {
+    // Check if notifications are enabled
+    const notificationsEnabled = await this.checkNotificationsEnabled();
+    if (!notificationsEnabled) {
+      console.log('Notifications disabled - skipping payment success notification');
+      return false;
+    }
+
     const title = `Payment Successful! 💳`;
     const body = `Payment of ₹${amount} for order #${orderId} has been completed.`;
     
@@ -259,7 +259,15 @@ class NotificationService {
 
   // Add notification to local storage
   async addNotification(notificationData) {
-    this.notifications.unshift(notificationData);
+    // Check if notification with same ID already exists
+    const existingIndex = this.notifications.findIndex(n => n.id === notificationData.id);
+    if (existingIndex !== -1) {
+      // Update existing notification instead of adding duplicate
+      this.notifications[existingIndex] = notificationData;
+    } else {
+      // Add new notification at the beginning
+      this.notifications.unshift(notificationData);
+    }
     
     // Keep only last 50 notifications
     if (this.notifications.length > 50) {
@@ -344,6 +352,37 @@ class NotificationService {
     return this.expoPushToken;
   }
 
+  // Check if notifications are enabled for the user
+  async checkNotificationsEnabled() {
+    try {
+      // First check local storage for cached setting
+      const cachedSetting = await AsyncStorage.getItem('notificationsEnabled');
+      if (cachedSetting !== null) {
+        return JSON.parse(cachedSetting);
+      }
+
+      // If not cached, check with backend
+      try {
+        const response = await notificationApi.getNotificationStats();
+        const enabled = response.notifications_enabled;
+        // Cache the setting
+        await AsyncStorage.setItem('notificationsEnabled', JSON.stringify(enabled));
+        return enabled;
+      } catch (error) {
+        // Default to enabled if we can't check
+        return true;
+      }
+    } catch (error) {
+      console.error('Error checking notification status:', error);
+      return true; // Default to enabled
+    }
+  }
+
+  // Update local notification setting cache
+  async updateNotificationSetting(enabled) {
+    await AsyncStorage.setItem('notificationsEnabled', JSON.stringify(enabled));
+  }
+
   // Send push notification (for testing)
   async sendPushNotification(expoPushToken, title, body, data = {}) {
     const message = {
@@ -371,12 +410,36 @@ class NotificationService {
 
   // Send test notification from backend
   async sendTestNotification() {
+    // Check if notifications are enabled
+    const notificationsEnabled = await this.checkNotificationsEnabled();
+    if (!notificationsEnabled) {
+      return false;
+    }
+
     try {
       await notificationApi.sendTestNotification();
-      console.log('Test notification sent from backend');
+      return true;
     } catch (error) {
       console.error('Error sending test notification:', error);
+      return false;
     }
+  }
+
+  // Send local test notification
+  async sendLocalTestNotification() {
+    // Check if notifications are enabled
+    const notificationsEnabled = await this.checkNotificationsEnabled();
+    if (!notificationsEnabled) {
+      return false;
+    }
+
+    const title = 'Test Notification 🔔';
+    const body = 'This is a test notification from Spicebite!';
+    
+    return await this.showLocalNotification(title, body, {
+      type: 'test',
+      timestamp: new Date().toISOString()
+    });
   }
 }
 

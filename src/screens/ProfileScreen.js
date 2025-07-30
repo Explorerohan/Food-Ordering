@@ -6,6 +6,7 @@ import { profileApi } from '../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView as SafeAreaViewContext } from 'react-native-safe-area-context';
 import { notificationApi } from '../services/api';
+import notificationService from '../services/notificationService';
 
 function ProfileScreen({ navigation, onLogout }) {
   const [username, setUsername] = useState('');
@@ -27,6 +28,10 @@ function ProfileScreen({ navigation, onLogout }) {
           setPhoneNumber(data.phone_number || '');
           setProfilePicture(data.profile_picture || null);
           setBio(data.bio || '');
+          
+          // Load notification status
+          const notificationStatus = await notificationService.checkNotificationsEnabled();
+          setNotificationsEnabled(notificationStatus);
         } catch (e) {
           Alert.alert('Error', 'Failed to load profile.');
         } finally {
@@ -49,6 +54,10 @@ function ProfileScreen({ navigation, onLogout }) {
     try {
       await notificationApi.toggleNotifications(newValue);
       setNotificationsEnabled(newValue);
+      
+      // Update the notification service cache
+      await notificationService.updateNotificationSetting(newValue);
+      
       // No alert needed - toggle provides immediate visual feedback
     } catch (error) {
       console.error('Error toggling notifications:', error);

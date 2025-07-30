@@ -58,23 +58,7 @@ const OrderConfirmationScreen = () => {
   useEffect(() => {
     fetchCartItems();
     
-    // Test notification when screen loads
-    const testNotification = async () => {
-      try {
-        console.log('=== TESTING NOTIFICATION FROM ORDER CONFIRMATION SCREEN ===');
-        await notificationService.showLocalNotification(
-          'Order Screen Test 🔔',
-          'Notification test from order confirmation screen!',
-          { type: 'test' }
-        );
-        console.log('=== TEST NOTIFICATION SENT FROM ORDER SCREEN ===');
-      } catch (error) {
-        console.error('Test notification failed in order screen:', error);
-      }
-    };
-    
-    // Test notification after 2 seconds
-    setTimeout(testNotification, 2000);
+
   }, []);
 
   const fetchCartItems = async () => {

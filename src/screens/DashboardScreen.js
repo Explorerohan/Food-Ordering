@@ -309,14 +309,11 @@ const DashboardScreen = ({ username }) => {
   };
 
   const handleNotificationLongPress = async () => {
-    // Test notification - long press to trigger
     try {
       // Try to send test notification from backend first
       try {
         await notificationService.sendTestNotification();
-        console.log('Test notification sent from backend');
       } catch (error) {
-        console.log('Backend test failed, showing local notification:', error.message);
         // Fallback to local notification
         await notificationService.showLocalNotification(
           'Test Notification 🧪',
@@ -332,17 +329,7 @@ const DashboardScreen = ({ username }) => {
   // Simple test notification (double tap notification icon)
   const handleNotificationDoubleTap = async () => {
     try {
-      console.log('=== TESTING NOTIFICATION SYSTEM ===');
-      
-      // Check notification status first
-      await notificationService.checkNotificationStatus();
-      
-      await notificationService.showLocalNotification(
-        'Quick Test 🔔',
-        'If you see this, notifications are working!',
-        { type: 'test' }
-      );
-      console.log('=== TEST NOTIFICATION SENT ===');
+      await notificationService.sendLocalTestNotification();
     } catch (error) {
       console.error('Test notification failed:', error);
     }

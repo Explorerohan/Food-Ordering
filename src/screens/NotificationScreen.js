@@ -73,20 +73,10 @@ const NotificationScreen = ({ navigation }) => {
 
   const handleTestNotification = async () => {
     try {
-      console.log('=== TESTING NOTIFICATION SYSTEM ===');
-      
-      // Check notification status first
-      await notificationService.checkNotificationStatus();
-      
-      await notificationService.showLocalNotification(
-        'Test Notification 🧪',
-        'This is a test notification from the notification screen!',
-        { type: 'test' }
-      );
-      console.log('=== TEST NOTIFICATION SENT ===');
-      
-      // Refresh notifications
-      await fetchNotifications();
+      const success = await notificationService.sendLocalTestNotification();
+      if (success) {
+        await fetchNotifications();
+      }
     } catch (error) {
       console.error('Test notification failed:', error);
     }

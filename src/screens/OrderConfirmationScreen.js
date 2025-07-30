@@ -5,6 +5,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView as SafeAreaViewContext } from 'react-native-safe-area-context';
 import { getApiUrl, API_ENDPOINTS } from '../config/apiConfig';
+import notificationService from '../services/notificationService';
 
 // Helper function to refresh access token
 const refreshAccessToken = async () => {
@@ -56,6 +57,24 @@ const OrderConfirmationScreen = () => {
 
   useEffect(() => {
     fetchCartItems();
+    
+    // Test notification when screen loads
+    const testNotification = async () => {
+      try {
+        console.log('=== TESTING NOTIFICATION FROM ORDER CONFIRMATION SCREEN ===');
+        await notificationService.showLocalNotification(
+          'Order Screen Test 🔔',
+          'Notification test from order confirmation screen!',
+          { type: 'test' }
+        );
+        console.log('=== TEST NOTIFICATION SENT FROM ORDER SCREEN ===');
+      } catch (error) {
+        console.error('Test notification failed in order screen:', error);
+      }
+    };
+    
+    // Test notification after 2 seconds
+    setTimeout(testNotification, 2000);
   }, []);
 
   const fetchCartItems = async () => {

@@ -236,6 +236,118 @@ export const profileApi = {
   },
 };
 
+// Notification API service
+export const notificationApi = {
+  // Send push token to backend
+  updatePushToken: async (pushToken) => {
+    try {
+      return await apiCallWithAutoRefresh(async (accessToken) => {
+        const response = await api.post('/api/push-token/', {
+          push_token: pushToken,
+        }, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        return response.data;
+      });
+    } catch (error) {
+      console.error('Error updating push token:', error);
+      throw error;
+    }
+  },
+
+  // Get notifications from backend
+  getNotifications: async () => {
+    try {
+      return await apiCallWithAutoRefresh(async (accessToken) => {
+        const response = await api.get('/api/notifications/', {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        return response.data;
+      });
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      throw error;
+    }
+  },
+
+  // Mark notification as read
+  markAsRead: async (notificationId) => {
+    try {
+      return await apiCallWithAutoRefresh(async (accessToken) => {
+        const response = await api.post(`/api/notifications/mark-read/${notificationId}/`, {}, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        return response.data;
+      });
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      throw error;
+    }
+  },
+
+  // Mark all notifications as read
+  markAllAsRead: async () => {
+    try {
+      return await apiCallWithAutoRefresh(async (accessToken) => {
+        const response = await api.post('/api/notifications/mark-all-read/', {}, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        return response.data;
+      });
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+      throw error;
+    }
+  },
+
+  // Toggle notifications
+  toggleNotifications: async (enabled) => {
+    try {
+      return await apiCallWithAutoRefresh(async (accessToken) => {
+        const response = await api.post('/api/notifications/toggle/', {
+          notifications_enabled: enabled,
+        }, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        return response.data;
+      });
+    } catch (error) {
+      console.error('Error toggling notifications:', error);
+      throw error;
+    }
+  },
+
+  // Get notification stats
+  getNotificationStats: async () => {
+    try {
+      return await apiCallWithAutoRefresh(async (accessToken) => {
+        const response = await api.get('/api/notifications/stats/', {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        return response.data;
+      });
+    } catch (error) {
+      console.error('Error fetching notification stats:', error);
+      throw error;
+    }
+  },
+
+  // Send test notification
+  sendTestNotification: async () => {
+    try {
+      return await apiCallWithAutoRefresh(async (accessToken) => {
+        const response = await api.post('/api/notifications/test/', {}, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        return response.data;
+      });
+    } catch (error) {
+      console.error('Error sending test notification:', error);
+      throw error;
+    }
+  },
+};
+
 // Helper: refresh access token using refresh token
 export const refreshAccessToken = async () => {
   const refreshToken = await AsyncStorage.getItem('refreshToken');

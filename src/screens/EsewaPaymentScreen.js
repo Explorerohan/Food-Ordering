@@ -6,6 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fetchWithAutoRefresh } from '../services/api';
 import { getApiUrl, API_ENDPOINTS } from '../config/apiConfig';
 import Ionicons from 'react-native-vector-icons/Ionicons'; // Added for success icon
+import notificationService from '../services/notificationService';
 
 // Mock eSewa Payment Page for Testing
 const MOCK_ESEWA_HTML = `
@@ -193,6 +194,7 @@ const MOCK_ESEWA_HTML = `
 `;
 
 const EsewaPaymentScreen = () => {
+  console.log('=== ESEWA PAYMENT SCREEN LOADED ===');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showWebView, setShowWebView] = useState(true);
@@ -283,7 +285,12 @@ const EsewaPaymentScreen = () => {
 
   // New handler for payment success message from WebView
   const handlePaymentSuccess = async () => {
-    if (orderCreated.current) return;
+    console.log('=== PAYMENT SUCCESS HANDLER STARTED ===');
+    console.log('This function is being called!');
+    if (orderCreated.current) {
+      console.log('Order already created, skipping...');
+      return;
+    }
     orderCreated.current = true;
     setShowWebView(false); // Immediately hide the WebView
     setProcessing(true); // Show loading spinner
@@ -324,18 +331,47 @@ const EsewaPaymentScreen = () => {
         throw new Error('Failed to create order');
       }
 
-              // Clear the cart after successful order
-        await fetchWithAutoRefresh(async (accessToken) => {
-          return await fetch(getApiUrl(API_ENDPOINTS.CART_CLEAR), {
-            method: 'DELETE',
-            headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {},
-          });
+      const orderData = await response.json();
+      const orderId = orderData.id || orderData.order_id;
+
+      console.log('Order created successfully:', orderId);
+      console.log('Order data:', orderData);
+
+      // Show order confirmation notification (frontend fallback)
+      if (orderId) {
+        console.log('Attempting to show order confirmation notification...');
+        try {
+          await notificationService.showOrderConfirmation(orderId, orderData);
+          console.log('Order confirmation notification sent successfully');
+        } catch (error) {
+          console.error('Error showing order confirmation notification:', error);
+        }
+
+        console.log('Attempting to show payment success notification...');
+        try {
+          await notificationService.showPaymentSuccess(orderId, tAmt);
+          console.log('Payment success notification sent successfully');
+        } catch (error) {
+          console.error('Error showing payment success notification:', error);
+        }
+      } else {
+        console.error('No order ID received from backend');
+      }
+
+      // Clear the cart after successful order
+      await fetchWithAutoRefresh(async (accessToken) => {
+        return await fetch(getApiUrl(API_ENDPOINTS.CART_CLEAR), {
+          method: 'DELETE',
+          headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {},
         });
+      });
 
       setProcessing(false); // Hide spinner
       setShowSuccess(true); // Show success message and wait for user action
 
     } catch (error) {
+      console.error('=== ERROR IN PAYMENT SUCCESS HANDLER ===');
+      console.error('Error details:', error);
       setProcessing(false); // Hide spinner
       setShowSuccess(true); // Show success message even on error
     }
@@ -369,7 +405,11 @@ const EsewaPaymentScreen = () => {
           onLoadEnd={handleLoadEnd}
           onError={handleLoadError}
           onMessage={event => {
+            console.log('=== WEBVIEW MESSAGE RECEIVED ===');
+            console.log('Message data:', event.nativeEvent.data);
+            console.log('Full event:', event.nativeEvent);
             if (event.nativeEvent.data === 'start-payment-processing' || event.nativeEvent.data === 'payment-success') {
+              console.log('Payment success detected, calling handlePaymentSuccess...');
               // Navigate to PaymentStatusScreen and pass all params
               navigation.replace('PaymentStatusScreen', {
                 deliveryLocation,

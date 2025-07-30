@@ -26,6 +26,8 @@ import FoodItemCard from '../components/FoodItemCard';
 import CategoryFilter from '../components/CategoryFilter';
 import { foodApi, mockFoodData, profileApi } from '../services/api';
 import { getApiUrl, API_ENDPOINTS } from '../config/apiConfig';
+import { useNotifications } from '../context/NotificationContext';
+import notificationService from '../services/notificationService';
 
 const DashboardScreen = ({ username }) => {
   const navigation = useNavigation();
@@ -48,6 +50,8 @@ const DashboardScreen = ({ username }) => {
     sortBy: 'default'
   });
   const [searchQuery, setSearchQuery] = useState('');
+  const [lastTap, setLastTap] = useState(null);
+  const { unreadCount } = useNotifications();
 
   // Static placeholder text
   const placeholderText = "Search your favourite food here...";
@@ -77,6 +81,7 @@ const DashboardScreen = ({ username }) => {
           setUserName('User');
         }
       };
+
       fetchProfile();
       // Clear search text when screen comes into focus
       setSearchQuery('');
@@ -299,12 +304,76 @@ const DashboardScreen = ({ username }) => {
     navigation.navigate('FoodDetailScreen', { item });
   };
 
+  const handleNotificationPress = () => {
+    navigation.navigate('NotificationScreen');
+  };
+
+  const handleNotificationLongPress = async () => {
+    // Test notification - long press to trigger
+    try {
+      // Try to send test notification from backend first
+      try {
+        await notificationService.sendTestNotification();
+        console.log('Test notification sent from backend');
+      } catch (error) {
+        console.log('Backend test failed, showing local notification:', error.message);
+        // Fallback to local notification
+        await notificationService.showLocalNotification(
+          'Test Notification 🧪',
+          'This is a test notification to verify the system is working!',
+          { type: 'test' }
+        );
+      }
+    } catch (error) {
+      console.error('Error showing test notification:', error);
+    }
+  };
+
+  // Simple test notification (double tap notification icon)
+  const handleNotificationDoubleTap = async () => {
+    try {
+      console.log('=== TESTING NOTIFICATION SYSTEM ===');
+      
+      // Check notification status first
+      await notificationService.checkNotificationStatus();
+      
+      await notificationService.showLocalNotification(
+        'Quick Test 🔔',
+        'If you see this, notifications are working!',
+        { type: 'test' }
+      );
+      console.log('=== TEST NOTIFICATION SENT ===');
+    } catch (error) {
+      console.error('Test notification failed:', error);
+    }
+  };
+
   const renderHeader = () => (
     <View style={styles.headerContainer}>
       <View style={styles.greetingRow}>
         <Text style={styles.greetingHello}><Text style={styles.greetingHelloBold}>Hello {userName || 'User'}!</Text> <Text style={styles.greetingWave}>👋</Text></Text>
-        <TouchableOpacity style={styles.notificationButton}>
+        <TouchableOpacity 
+          style={styles.notificationButton}
+          onPress={handleNotificationPress}
+          onLongPress={handleNotificationLongPress}
+          onPressIn={() => {
+            // Simple double tap detection
+            if (lastTap && Date.now() - lastTap < 300) {
+              handleNotificationDoubleTap();
+              setLastTap(null);
+            } else {
+              setLastTap(Date.now());
+            }
+          }}
+        >
           <Ionicons name="notifications-outline" size={28} color="#222" />
+          {unreadCount > 0 && (
+            <View style={styles.notificationBadge}>
+              <Text style={styles.notificationBadgeText}>
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
       <Text style={styles.greetingTitle}>What would you like to order?</Text>
@@ -612,6 +681,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#f6f6f6',
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    backgroundColor: '#FF6B35',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  notificationBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   greetingHello: {
     fontSize: 20,

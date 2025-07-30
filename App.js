@@ -32,6 +32,9 @@ import SystemNavigationBar from 'react-native-system-navigation-bar';
 import EsewaPaymentScreen from './src/screens/EsewaPaymentScreen';
 import PaymentStatusScreen from './src/screens/PaymentStatusScreen';
 import SetNewPasswordScreen from './src/screens/SetNewPasswordScreen';
+import NotificationScreen from './src/screens/NotificationScreen';
+import notificationService from './src/services/notificationService';
+import { NotificationProvider } from './src/context/NotificationContext';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -98,6 +101,20 @@ export default function App() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [profilePicture, setProfilePicture] = useState(null);
+
+  // Initialize notification service
+  useEffect(() => {
+    const initializeNotifications = async () => {
+      try {
+        await notificationService.initialize();
+        console.log('Notification service initialized successfully');
+      } catch (error) {
+        console.error('Failed to initialize notification service:', error);
+      }
+    };
+
+    initializeNotifications();
+  }, []);
   const [bio, setBio] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -201,6 +218,14 @@ export default function App() {
       // Save user in AuthContext
       auth.current.login(userData, token);
       setIsAuthenticated(true);
+      
+      // Send push token to backend after successful login
+      try {
+        await notificationService.sendPushTokenToBackend();
+      } catch (error) {
+        console.error('Failed to send push token after login:', error);
+      }
+      
       if (navigation && navigation.reset) {
         navigation.reset({
           index: 0,
@@ -293,13 +318,14 @@ export default function App() {
 
   return (
     <AuthProvider>
-      <AuthContext.Consumer>
-        {context => {
-          auth.current = context;
-          return (
-            <NavigationContainer>
-              <StatusBar style="auto" />
-              <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <NotificationProvider>
+        <AuthContext.Consumer>
+          {context => {
+            auth.current = context;
+            return (
+              <NavigationContainer>
+                <StatusBar style="auto" />
+                <Stack.Navigator screenOptions={{ headerShown: false }}>
                 {!isAuthenticated ? (
                   <>
                     <Stack.Screen name="Login" >
@@ -332,6 +358,7 @@ export default function App() {
                     <Stack.Screen name="EsewaPaymentScreen" component={EsewaPaymentScreen} />
                     <Stack.Screen name="PaymentStatusScreen" component={PaymentStatusScreen} options={{ headerShown: false }} />
                     <Stack.Screen name="AllFoodScreen" component={AllFoodScreen} options={{ title: 'All Food Items' }} />
+                    <Stack.Screen name="NotificationScreen" component={NotificationScreen} options={{ headerShown: false }} />
                   </>
                 )}
               </Stack.Navigator>
@@ -339,6 +366,7 @@ export default function App() {
           );
         }}
       </AuthContext.Consumer>
+      </NotificationProvider>
     </AuthProvider>
   );
 }

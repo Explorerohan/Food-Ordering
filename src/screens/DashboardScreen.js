@@ -594,6 +594,11 @@ const DashboardScreen = ({ username }) => {
                 <Text style={styles.featuredStarText}>
                   {getAverageRating(bestSeller)?.toFixed(2) ?? 'N/A'}
                 </Text>
+                {bestSeller.reviews && bestSeller.reviews.length > 0 && (
+                  <Text style={styles.featuredReviewCount}>
+                    ({bestSeller.reviews.length} {bestSeller.reviews.length === 1 ? 'review' : 'reviews'})
+                  </Text>
+                )}
               </View>
               {/* Cart button top right */}
               <TouchableOpacity style={styles.featuredCartOverlay} onPress={(e) => { e.stopPropagation(); handleAddToCart(bestSeller); }}>
@@ -669,6 +674,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
+    marginTop: 4, // Move the notification icon down a bit
   },
   notificationBadge: {
     position: 'absolute',
@@ -908,6 +914,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#222',
     fontWeight: '600',
+    marginLeft: 4,
+  },
+  featuredReviewCount: {
+    fontSize: 12,
+    color: '#888',
     marginLeft: 4,
   },
   featuredCartOverlay: {

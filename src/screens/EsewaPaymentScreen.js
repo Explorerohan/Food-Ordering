@@ -54,64 +54,50 @@ const MOCK_ESEWA_HTML = `
         
         <div class="test-info">
             <strong>🧪 TEST MODE</strong><br>
-            <strong>eSewa ID:</strong> 9806800001, 9806800002, 9806800003, 9806800004, 9806800005<br>
-            <strong>Password:</strong> Nepal@123<br>
-            <strong>MPIN:</strong> 1122<br>
-            <strong>Token:</strong> 123456
+            <strong>Phone Number:</strong> 9806800001, 9806800002, 9806800003, 9806800004, 9806800005<br>
+            <strong>PIN:</strong> 1122<br>
+            <strong>OTP:</strong> 123456<br>
         </div>
         
         <div class="amount">
             Amount: ₹<span id="amount">__AMOUNT__</span>
         </div>
         
-        <!-- Step 1: Login -->
+        <!-- Step 1: Phone Number and PIN -->
         <div id="step1" class="step active">
             <h3>Login to eSewa</h3>
             <form id="loginForm">
                 <div class="form-group">
-                    <label for="esewaId">eSewa ID</label>
-                    <input type="text" id="esewaId" placeholder="Enter your eSewa ID" required>
+                    <label for="phoneNumber">Phone Number</label>
+                    <input type="text" id="phoneNumber" placeholder="Enter your phone number" required>
                 </div>
                 
                 <div class="form-group">
-                    <label for="password">Password</label>
-                    <input type="password" id="password" placeholder="Enter your password" required>
+                    <label for="pin">PIN</label>
+                    <input type="password" id="pin" placeholder="Enter your 4-digit PIN" maxlength="4" required>
                 </div>
                 
-                <button type="submit" class="btn">Login</button>
+                <button type="submit" class="btn">Continue</button>
             </form>
         </div>
         
-        <!-- Step 2: MPIN Verification -->
+        <!-- Step 2: OTP Verification -->
         <div id="step2" class="step">
-            <h3>Enter MPIN</h3>
-            <form id="mpinForm">
+            <h3>Enter OTP</h3>
+            <p style="color: #666; margin-bottom: 20px;">We've sent a 6-digit OTP to your registered mobile number.</p>
+            <form id="otpForm">
                 <div class="form-group">
-                    <label for="mpin">MPIN</label>
-                    <input type="password" id="mpin" placeholder="Enter your MPIN" maxlength="4" required>
+                    <label for="otp">OTP</label>
+                    <input type="text" id="otp" placeholder="Enter 6-digit OTP" maxlength="6" required>
                 </div>
                 
-                <button type="submit" class="btn">Verify MPIN</button>
+                <button type="submit" class="btn">Verify OTP</button>
                 <button type="button" class="btn btn-secondary" onclick="goBackToLogin()">Back</button>
             </form>
         </div>
         
-        <!-- Step 3: Token Verification -->
+        <!-- Step 3: Payment Confirmation -->
         <div id="step3" class="step">
-            <h3>Enter Token</h3>
-            <form id="tokenForm">
-                <div class="form-group">
-                    <label for="token">Token</label>
-                    <input type="text" id="token" placeholder="Enter 6-digit token" maxlength="6" required>
-                </div>
-                
-                <button type="submit" class="btn">Verify Token</button>
-                <button type="button" class="btn btn-secondary" onclick="goBackToMPIN()">Back</button>
-            </form>
-        </div>
-        
-        <!-- Step 4: Payment Confirmation -->
-        <div id="step4" class="step">
             <h3>Payment Confirmation</h3>
             <div class="success">
                 <p>✅ Payment verification successful!</p>
@@ -121,10 +107,9 @@ const MOCK_ESEWA_HTML = `
     </div>
     
     <script>
-        const validEsewaIds = ['9806800001', '9806800002', '9806800003', '9806800004', '9806800005'];
-        const validPassword = 'Nepal@123';
-        const validMPIN = '1122';
-        const validToken = '123456';
+        const validPhoneNumbers = ['9806800001', '9806800002', '9806800003', '9806800004', '9806800005'];
+        const validPIN = '1122';
+        const validOTP = '123456';
         
         function showStep(stepNumber) {
             document.querySelectorAll('.step').forEach(step => step.classList.remove('active'));
@@ -135,45 +120,28 @@ const MOCK_ESEWA_HTML = `
             showStep(1);
         }
         
-        function goBackToMPIN() {
-            showStep(2);
-        }
-        
-        // Handle login form
+        // Handle login form (Phone Number + PIN)
         document.getElementById('loginForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
-            const esewaId = document.getElementById('esewaId').value;
-            const password = document.getElementById('password').value;
+            const phoneNumber = document.getElementById('phoneNumber').value;
+            const pin = document.getElementById('pin').value;
             
-            if (validEsewaIds.includes(esewaId) && password === validPassword) {
+            if (validPhoneNumbers.includes(phoneNumber) && pin === validPIN) {
                 showStep(2);
             } else {
-                alert('Invalid eSewa ID or password. Please use the test credentials provided.');
+                alert('Invalid phone number or PIN. Please use the test credentials provided.');
             }
         });
         
-        // Handle MPIN form
-        document.getElementById('mpinForm').addEventListener('submit', function(e) {
+        // Handle OTP form
+        document.getElementById('otpForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
-            const mpin = document.getElementById('mpin').value;
+            const otp = document.getElementById('otp').value;
             
-            if (mpin === validMPIN) {
+            if (otp === validOTP) {
                 showStep(3);
-            } else {
-                alert('Invalid MPIN. Please use the test MPIN: 1122');
-            }
-        });
-        
-        // Handle token form
-        document.getElementById('tokenForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const token = document.getElementById('token').value;
-            
-            if (token === validToken) {
-                showStep(4);
                 // Immediately notify React Native to start payment processing
                 if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
                     window.ReactNativeWebView.postMessage('start-payment-processing');
@@ -185,7 +153,7 @@ const MOCK_ESEWA_HTML = `
                     }
                 }, 3000);
             } else {
-                alert('Invalid token. Please use the test token: 123456');
+                alert('Invalid OTP. Please use the test OTP: 123456');
             }
         });
     </script>
@@ -228,6 +196,8 @@ const EsewaPaymentScreen = () => {
           food_item: item.food_item.id,
           quantity: item.quantity,
           price: item.food_price || (item.size && item.size.price) || 0,
+          size: item.size ? item.size.size : '',  // Add size field
+          spice_level: item.spice_level || 'Mild',  // Add spice_level field
         }));
 
         // Create order using the cart checkout endpoint
@@ -302,6 +272,8 @@ const EsewaPaymentScreen = () => {
         food_item: item.food_item.id,
         quantity: item.quantity,
         price: item.food_price || (item.size && item.size.price) || 0,
+        size: item.size ? item.size.size : '',  // Add size field
+        spice_level: item.spice_level || 'Mild',  // Add spice_level field
       }));
 
       // Create order using the cart checkout endpoint

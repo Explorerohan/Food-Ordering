@@ -149,6 +149,8 @@ const CartDetails = ({ navigation, route }) => {
         food_item: item.food_item.id,
         quantity: item.quantity,
         price: item.food_price || (item.size && item.size.price) || 0,
+        size: item.size ? item.size.size : '',  // Add size field
+        spice_level: item.spice_level || 'Mild',  // Add spice_level field
       }));
 
       const response = await fetchWithAutoRefresh(async (accessToken) => {

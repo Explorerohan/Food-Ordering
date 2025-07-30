@@ -15,9 +15,12 @@ const { width } = Dimensions.get('window');
 const FoodItemCard = ({ item, onPress, onAddToCart }) => {
   const smallSize = item.sizes?.find(s => s.size === 'Small');
   let avgRating = null;
+  let reviewCount = 0;
+  
   if (Array.isArray(item.reviews) && item.reviews.length > 0) {
     const total = item.reviews.reduce((sum, r) => sum + (r.rating || 0), 0);
     avgRating = (total / item.reviews.length);
+    reviewCount = item.reviews.length;
   }
 
   const renderStars = (rating) => {
@@ -49,25 +52,23 @@ const FoodItemCard = ({ item, onPress, onAddToCart }) => {
             {smallSize ? `Rs. ${smallSize.price}` : 'N/A'}
           </Text>
         </View>
-        {/* Stars and cart button in the same row if rating exists, else cart button alone */}
-        {avgRating !== null ? (
-          <View style={styles.ratingRow}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              {renderStars(avgRating)}
-              <Text style={styles.ratingNumber}>{avgRating.toFixed(2)}</Text>
-            </View>
-            <TouchableOpacity style={styles.cartBtn} onPress={(e) => { e.stopPropagation(); onAddToCart(item); }}>
-              <Ionicons name="cart-outline" size={18} color="#FF6B35" />
-            </TouchableOpacity>
+        {/* Reviews and cart button row */}
+        <View style={styles.ratingRow}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            {avgRating !== null ? (
+              <>
+                {renderStars(avgRating)}
+                <Text style={styles.ratingNumber}>{avgRating.toFixed(2)}</Text>
+                <Text style={styles.reviewCount}>({reviewCount} {reviewCount === 1 ? 'review' : 'reviews'})</Text>
+              </>
+            ) : (
+              <Text style={styles.noReviewsText}>No reviews</Text>
+            )}
           </View>
-        ) : (
-          <View style={styles.ratingRow}>
-            <View style={{ flex: 1 }} />
-            <TouchableOpacity style={styles.cartBtn} onPress={(e) => { e.stopPropagation(); onAddToCart(item); }}>
-              <Ionicons name="cart-outline" size={18} color="#FF6B35" />
-            </TouchableOpacity>
-          </View>
-        )}
+          <TouchableOpacity style={styles.cartBtn} onPress={(e) => { e.stopPropagation(); onAddToCart(item); }}>
+            <Ionicons name="cart-outline" size={18} color="#FF6B35" />
+          </TouchableOpacity>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -152,6 +153,18 @@ const styles = StyleSheet.create({
     color: '#222',
     marginLeft: 4,
     fontWeight: '500',
+  },
+  reviewCount: {
+    fontSize: 11,
+    color: '#666',
+    marginLeft: 4,
+    fontWeight: '400',
+  },
+  noReviewsText: {
+    fontSize: 12,
+    color: '#999',
+    fontWeight: '400',
+    fontStyle: 'italic',
   },
 });
 

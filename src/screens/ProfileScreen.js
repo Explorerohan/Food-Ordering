@@ -100,7 +100,7 @@ function ProfileScreen({ navigation, onLogout }) {
           showToggle={true}
           toggleValue={notificationsEnabled}
           onToggleChange={handleNotificationToggle}
-          color="#FF6B35"
+          color={notificationsEnabled ? '#4CAF50' : '#F44336'}
         />
         <MenuItem icon="log-out-outline" label="Sign Out" onPress={() => onLogout(navigation)} color="#FF6B35" />
       </View>
@@ -119,9 +119,9 @@ function MenuItem({ icon, label, onPress, color, showToggle, toggleValue, onTogg
         <Switch
           value={toggleValue}
           onValueChange={onToggleChange}
-          trackColor={{ false: '#E0E0E0', true: '#FF6B35' }}
-          thumbColor={toggleValue ? '#fff' : '#f4f3f4'}
-          ios_backgroundColor="#E0E0E0"
+          trackColor={{ false: '#F44336', true: '#4CAF50' }}
+          thumbColor={toggleValue ? '#fff' : '#fff'}
+          ios_backgroundColor="#F44336"
         />
       ) : (
         <Ionicons name="chevron-forward" size={22} color="#bbb" />

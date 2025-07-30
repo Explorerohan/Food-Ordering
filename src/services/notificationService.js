@@ -17,6 +17,12 @@ class NotificationService {
   constructor() {
     this.notifications = [];
     this.expoPushToken = null;
+    this.onNotificationUpdate = null; // Callback for real-time updates
+  }
+
+  // Set callback for notification updates
+  setNotificationUpdateCallback(callback) {
+    this.onNotificationUpdate = callback;
   }
 
   // Initialize notification service
@@ -105,6 +111,8 @@ class NotificationService {
 
   // Handle received notification
   async handleNotificationReceived(notification) {
+    console.log('🔔 Push notification received:', notification.request.content.title);
+    
     const notificationData = {
       id: notification.request.identifier,
       title: notification.request.content.title,
@@ -115,7 +123,16 @@ class NotificationService {
       type: notification.request.content.data?.type || 'general'
     };
 
+    console.log('📝 Adding notification to local storage:', notificationData);
     await this.addNotification(notificationData);
+    
+    // Immediately notify context about the new notification
+    if (this.onNotificationUpdate) {
+      console.log('🔄 Triggering notification callback');
+      this.onNotificationUpdate(notificationData);
+    } else {
+      console.log('⚠️ No notification callback set up');
+    }
   }
 
   // Handle notification tap
@@ -159,6 +176,12 @@ class NotificationService {
       };
 
       await this.addNotification(notificationData);
+      
+      // Notify context about the new notification immediately
+      if (this.onNotificationUpdate) {
+        this.onNotificationUpdate(notificationData);
+      }
+      
       return notificationId;
     } catch (error) {
       console.error('Error showing local notification:', error);
@@ -275,6 +298,11 @@ class NotificationService {
     }
     
     await this.saveNotifications();
+    
+    // Notify context about the update
+    if (this.onNotificationUpdate) {
+      this.onNotificationUpdate(notificationData);
+    }
   }
 
   // Get all notifications
@@ -296,6 +324,11 @@ class NotificationService {
       notification.read = true;
       await this.saveNotifications();
       
+      // Notify context about the update
+      if (this.onNotificationUpdate) {
+        this.onNotificationUpdate(notification);
+      }
+      
       // Also mark as read on backend
       try {
         await notificationApi.markAsRead(notificationId);
@@ -309,6 +342,11 @@ class NotificationService {
   async markAllAsRead() {
     this.notifications.forEach(n => n.read = true);
     await this.saveNotifications();
+    
+    // Notify context about the update (send null to indicate all marked as read)
+    if (this.onNotificationUpdate) {
+      this.onNotificationUpdate(null);
+    }
     
     // Also mark all as read on backend
     try {

@@ -33,7 +33,6 @@ import EsewaPaymentScreen from './src/screens/EsewaPaymentScreen';
 import PaymentStatusScreen from './src/screens/PaymentStatusScreen';
 import SetNewPasswordScreen from './src/screens/SetNewPasswordScreen';
 import NotificationScreen from './src/screens/NotificationScreen';
-import notificationService from './src/services/notificationService';
 import { NotificationProvider } from './src/context/NotificationContext';
 
 const Stack = createStackNavigator();
@@ -101,20 +100,6 @@ export default function App() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [profilePicture, setProfilePicture] = useState(null);
-
-  // Initialize notification service
-  useEffect(() => {
-    const initializeNotifications = async () => {
-      try {
-        await notificationService.initialize();
-        console.log('Notification service initialized successfully');
-      } catch (error) {
-        console.error('Failed to initialize notification service:', error);
-      }
-    };
-
-    initializeNotifications();
-  }, []);
   const [bio, setBio] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -219,12 +204,8 @@ export default function App() {
       auth.current.login(userData, token);
       setIsAuthenticated(true);
       
-      // Send push token to backend after successful login
-      try {
-        await notificationService.sendPushTokenToBackend();
-      } catch (error) {
-        console.error('Failed to send push token after login:', error);
-      }
+      // Push token will be sent to backend by the NotificationContext
+      // when it initializes after login
       
       if (navigation && navigation.reset) {
         navigation.reset({

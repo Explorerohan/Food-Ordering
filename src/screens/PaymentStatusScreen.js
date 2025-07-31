@@ -14,7 +14,7 @@ const PaymentStatusScreen = () => {
   const [error, setError] = useState(null);
 
   // Extract params
-  const { deliveryLocation, display_name, cartItems, tAmt, description } = route.params || {};
+  const { deliveryLocation, display_name, cartItems, tAmt, description, isCod } = route.params || {};
 
   useEffect(() => {
     const processPayment = async () => {
@@ -38,11 +38,12 @@ const PaymentStatusScreen = () => {
               'Authorization': `Bearer ${accessToken}`,
             },
             body: JSON.stringify({
-              description: description || 'Paid via eSewa',
+              description: description || (isCod ? 'Cash on Delivery' : 'Paid via eSewa'),
               latitude: deliveryLocation?.latitude,
               longitude: deliveryLocation?.longitude,
               delivery_address: deliveryLocation?.display_name || display_name,
               total_amount: tAmt,
+              payment_method: isCod ? 'cod' : 'esewa',
               items: itemsPayload,
             }),
           });
@@ -74,7 +75,9 @@ const PaymentStatusScreen = () => {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
         <ActivityIndicator size="large" color="#60bb46" />
-        <Text style={{ fontSize: 20, color: '#222', marginTop: 24, fontWeight: 'bold' }}>Processing Payment...</Text>
+        <Text style={{ fontSize: 20, color: '#222', marginTop: 24, fontWeight: 'bold' }}>
+          {isCod ? 'Placing Order...' : 'Processing Payment...'}
+        </Text>
       </View>
     );
   }
@@ -83,7 +86,9 @@ const PaymentStatusScreen = () => {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
         <Ionicons name="close-circle-outline" size={80} color="#F44336" style={{ marginBottom: 24 }} />
-        <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#F44336', marginBottom: 12, textAlign: 'center' }}>Payment Failed</Text>
+        <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#F44336', marginBottom: 12, textAlign: 'center' }}>
+          {isCod ? 'Order Failed' : 'Payment Failed'}
+        </Text>
         <Text style={{ fontSize: 16, color: '#666', marginBottom: 32, textAlign: 'center', maxWidth: 300 }}>{error}</Text>
         <TouchableOpacity
           style={{ backgroundColor: '#60bb46', paddingVertical: 14, paddingHorizontal: 40, borderRadius: 8 }}
@@ -99,9 +104,14 @@ const PaymentStatusScreen = () => {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
         <Ionicons name="checkmark-circle-outline" size={80} color="#60bb46" style={{ marginBottom: 24 }} />
-        <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#222', marginBottom: 12, textAlign: 'center' }}>Payment Completed Successfully!</Text>
+        <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#222', marginBottom: 12, textAlign: 'center' }}>
+          {isCod ? 'Order Placed Successfully!' : 'Payment Completed Successfully!'}
+        </Text>
         <Text style={{ fontSize: 16, color: '#666', marginBottom: 32, textAlign: 'center', maxWidth: 300 }}>
-          Your payment and order have been processed. Thank you!
+          {isCod 
+            ? 'Your order has been placed and will be delivered soon. Pay when you receive your order!'
+            : 'Your payment and order have been processed. Thank you!'
+          }
         </Text>
         <TouchableOpacity
           style={{ backgroundColor: '#60bb46', paddingVertical: 14, paddingHorizontal: 40, borderRadius: 8 }}

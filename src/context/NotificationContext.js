@@ -63,6 +63,8 @@ export const NotificationProvider = ({ children }) => {
   const fetchNotifications = async () => {
     try {
       setLoading(true);
+      // Sync with backend to get user-specific notifications
+      await notificationService.syncWithBackend();
       const data = await notificationService.getNotifications();
       setNotifications(data);
       
@@ -108,6 +110,17 @@ export const NotificationProvider = ({ children }) => {
       setUnreadCount(0);
     } catch (error) {
       console.error('Error clearing notifications:', error);
+    }
+  };
+
+  // Clear notifications when user logs out
+  const clearNotificationsOnLogout = async () => {
+    try {
+      await notificationService.clearLocalNotifications();
+      setNotifications([]);
+      setUnreadCount(0);
+    } catch (error) {
+      console.error('Error clearing notifications on logout:', error);
     }
   };
 
@@ -193,6 +206,7 @@ export const NotificationProvider = ({ children }) => {
     markAsRead,
     markAllAsRead,
     clearAllNotifications,
+    clearNotificationsOnLogout,
     addNotification,
     showOrderConfirmation,
     showPaymentSuccess,

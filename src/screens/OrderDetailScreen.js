@@ -207,7 +207,13 @@ const OrderDetailScreen = ({ route, navigation }) => {
           <Text style={styles.sectionTitle}>Payment Method</Text>
           <View style={styles.infoRow}>
             <Ionicons name="card-outline" size={20} color="#666" />
-            <Text style={styles.infoText}>Cash on Delivery</Text>
+            <Text style={styles.infoText}>
+              {order.payment_method === 'cod' ? 'Cash on Delivery' : 
+               order.payment_method === 'esewa' ? 'eSewa' :
+               order.payment_method === 'khalti' ? 'Khalti' :
+               order.payment_method === 'fonepay' ? 'Fonepay' :
+               order.payment_method || 'Cash on Delivery'}
+            </Text>
           </View>
         </View>
 

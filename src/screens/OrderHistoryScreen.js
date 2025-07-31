@@ -75,6 +75,17 @@ const OrderHistoryScreen = ({ navigation }) => {
         ))}
       </View>
       
+      <View style={styles.paymentMethod}>
+        <Ionicons name="card-outline" size={16} color="#666" />
+        <Text style={styles.paymentMethodText}>
+          {item.payment_method === 'cod' ? 'Cash on Delivery' : 
+           item.payment_method === 'esewa' ? 'eSewa' :
+           item.payment_method === 'khalti' ? 'Khalti' :
+           item.payment_method === 'fonepay' ? 'Fonepay' :
+           item.payment_method || 'Cash on Delivery'}
+        </Text>
+      </View>
+      
       <View style={styles.orderTotal}>
         <Text style={styles.totalLabel}>Total:</Text>
         <Text style={styles.totalAmount}>₹{item.total_amount}</Text>
@@ -251,6 +262,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     fontWeight: '500',
+  },
+  paymentMethod: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#f8f8f8',
+    borderRadius: 8,
+  },
+  paymentMethodText: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+    marginLeft: 8,
   },
   orderTotal: {
     flexDirection: 'row',

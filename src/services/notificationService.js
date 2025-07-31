@@ -28,6 +28,10 @@ class NotificationService {
   // Initialize notification service
   async initialize() {
     try {
+      // Clear any existing notifications on app start (in case of user switch)
+      this.notifications = [];
+      await this.saveNotifications();
+      
       // Request permissions
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
       let finalStatus = existingStatus;
@@ -92,6 +96,9 @@ class NotificationService {
 
     if (this.expoPushToken) {
       try {
+        // Clear existing notifications before syncing with new user
+        await this.clearLocalNotifications();
+        
         await notificationApi.updatePushToken(this.expoPushToken);
         console.log('Push token sent to backend successfully');
         return true;
@@ -257,27 +264,27 @@ class NotificationService {
   async syncWithBackend() {
     try {
       const backendNotifications = await notificationApi.getNotifications();
-      // Merge backend notifications with local ones
-      // This ensures we have all notifications from both sources
-      for (const backendNotif of backendNotifications) {
-        const existingIndex = this.notifications.findIndex(n => n.id === backendNotif.id);
-        if (existingIndex === -1) {
-          // Add new notification from backend
-          this.notifications.unshift({
-            id: backendNotif.id,
-            title: backendNotif.title,
-            body: backendNotif.body,
-            data: backendNotif.data,
-            timestamp: backendNotif.created_at,
-            read: backendNotif.read,
-            type: backendNotif.notification_type
-          });
-        }
-      }
+      // Replace local notifications with backend notifications (user-specific)
+      this.notifications = backendNotifications.map(backendNotif => ({
+        id: backendNotif.id,
+        title: backendNotif.title,
+        body: backendNotif.body,
+        data: backendNotif.data,
+        timestamp: backendNotif.created_at,
+        read: backendNotif.read,
+        type: backendNotif.notification_type
+      }));
       await this.saveNotifications();
     } catch (error) {
       console.error('Error syncing with backend:', error);
     }
+  }
+
+  // Clear local notifications (call this when user logs out)
+  async clearLocalNotifications() {
+    this.notifications = [];
+    await this.saveNotifications();
+    await Notifications.dismissAllNotificationsAsync();
   }
 
   // Add notification to local storage

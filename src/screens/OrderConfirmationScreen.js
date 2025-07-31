@@ -163,7 +163,7 @@ const OrderConfirmationScreen = () => {
     })
   ).current;
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (selectedPayment === 'esewa') {
       // Generate a unique transaction ID
       const transactionId = `SPICEBITE_${Date.now()}`;
@@ -188,8 +188,15 @@ const OrderConfirmationScreen = () => {
         cartItems,
       });
     } else if (selectedPayment === 'cod') {
-      // Handle cash on delivery
-      Alert.alert('Order Confirmed', 'Your order will be delivered soon!');
+      // Handle cash on delivery - navigate to PaymentStatusScreen
+      navigation.navigate('PaymentStatusScreen', {
+        deliveryLocation,
+        display_name: deliveryLocation?.display_name || display_name,
+        cartItems,
+        tAmt: totalAmount,
+        description: description || 'Cash on Delivery',
+        isCod: true, // Flag to indicate this is COD order
+      });
     } else {
       // Handle other payment methods
       Alert.alert('Payment Method', 'This payment method is not available yet.');

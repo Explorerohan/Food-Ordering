@@ -269,7 +269,8 @@ export default function App() {
         key.startsWith('phoneNumber_') ||
         key === 'cart' ||
         key === 'user' ||
-        key === 'token'
+        key === 'token' ||
+        key === 'notifications' // Also clear notifications from AsyncStorage
     );
     await AsyncStorage.multiRemove(userKeys);
     setIsAuthenticated(false);

@@ -29,6 +29,7 @@ export const API_ENDPOINTS = {
   
   // Orders
   ORDERS: '/api/orders/',
+  ORDER_CANCEL: '/api/orders/{id}/cancel/',
   
   // Reviews
   REVIEWS: '/api/reviews/',

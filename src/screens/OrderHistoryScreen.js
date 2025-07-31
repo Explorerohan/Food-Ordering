@@ -42,6 +42,57 @@ const OrderHistoryScreen = ({ navigation }) => {
     }, [])
   );
 
+  const handleCancelOrder = async (orderId, currentStatus) => {
+    // Check if order can be cancelled
+    if (['delivered', 'completed', 'cancelled'].includes(currentStatus.toLowerCase())) {
+      Alert.alert(
+        'Cannot Cancel Order',
+        `This order cannot be cancelled because it is already ${currentStatus.toLowerCase()}.`,
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    Alert.alert(
+      'Cancel Order',
+      'Are you sure you want to cancel this order? This action cannot be undone.',
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Yes, Cancel',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const response = await fetchWithAutoRefresh(async (accessToken) => {
+                return await fetch(getApiUrl(API_ENDPOINTS.ORDER_CANCEL.replace('{id}', orderId)), {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`,
+                  },
+                });
+              });
+
+              if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to cancel order');
+              }
+
+              const result = await response.json();
+              Alert.alert('Success', 'Order cancelled successfully!');
+              
+              // Refresh the orders list
+              fetchOrders();
+            } catch (error) {
+              console.error('Error cancelling order:', error);
+              Alert.alert('Error', error.message || 'Failed to cancel order. Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const renderOrderItem = ({ item }) => (
     <TouchableOpacity 
       style={styles.orderCard}
@@ -95,6 +146,18 @@ const OrderHistoryScreen = ({ navigation }) => {
         <Text style={styles.viewDetailsText}>Tap to view details</Text>
         <Ionicons name="chevron-forward" size={16} color="#FF6B35" />
       </View>
+      
+      {/* Cancel Order Button - Only show for cancellable orders */}
+      {['pending', 'confirmed'].includes(item.status.toLowerCase()) && (
+        <TouchableOpacity
+          style={styles.cancelButton}
+          onPress={() => handleCancelOrder(item.id, item.status)}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="close-circle-outline" size={20} color="#F44336" />
+          <Text style={styles.cancelButtonText}>Cancel Order</Text>
+        </TouchableOpacity>
+      )}
     </TouchableOpacity>
   );
 
@@ -327,6 +390,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     textAlign: 'center',
+  },
+  cancelButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFF5F5',
+    borderWidth: 1,
+    borderColor: '#F44336',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginTop: 12,
+  },
+  cancelButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#F44336',
+    marginLeft: 8,
   },
 });
 

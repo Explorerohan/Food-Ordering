@@ -335,6 +335,41 @@ const DashboardScreen = ({ username }) => {
     }
   };
 
+  const hasActiveFilters = () => {
+    return filters.priceRange !== 'all' || filters.rating > 0 || filters.sortBy !== 'default';
+  };
+
+  const getActiveFiltersText = () => {
+    const activeFilters = [];
+    if (filters.priceRange !== 'all') {
+      const priceText = filters.priceRange === 'under rs.200' ? 'Under Rs.200' :
+                       filters.priceRange === 'rs.200-rs.500' ? 'Rs.200-Rs.500' :
+                       filters.priceRange === 'over rs.500' ? 'Over Rs.500' : filters.priceRange;
+      activeFilters.push(priceText);
+    }
+    if (filters.rating > 0) {
+      activeFilters.push(`${filters.rating}+ stars`);
+    }
+    if (filters.sortBy !== 'default') {
+      const sortText = filters.sortBy === 'price: low to high' ? 'Price: Low to High' :
+                      filters.sortBy === 'price: high to low' ? 'Price: High to Low' :
+                      filters.sortBy === 'rating' ? 'Rating' : filters.sortBy;
+      activeFilters.push(sortText);
+    }
+    return activeFilters.join(', ');
+  };
+
+  const clearAllFilters = () => {
+    const newFilters = {
+      priceRange: 'all',
+      rating: 0,
+      sortBy: 'default'
+    };
+    setFilters(newFilters);
+    setTempFilters(newFilters);
+    fetchFoodItems(); // Re-fetch with cleared filters
+  };
+
   const renderHeader = () => (
     <View style={styles.headerContainer}>
       <View style={styles.greetingRow}>
@@ -389,8 +424,31 @@ const DashboardScreen = ({ username }) => {
           onPress={() => setIsFilterVisible(true)}
         >
           <Ionicons name="options-outline" size={22} color="#fff" />
+          {hasActiveFilters() && (
+            <View style={styles.filterIndicator}>
+              <View style={styles.filterIndicatorDot} />
+            </View>
+          )}
         </TouchableOpacity>
       </View>
+      
+      {/* Active Filters Display */}
+      {hasActiveFilters() && (
+        <View style={styles.activeFiltersContainer}>
+          <View style={styles.activeFiltersContent}>
+            <Ionicons name="filter" size={16} color="#FF6B35" style={{ marginRight: 8 }} />
+            <Text style={styles.activeFiltersText}>Active filters:</Text>
+            <Text style={styles.activeFiltersList}>{getActiveFiltersText()}</Text>
+            <TouchableOpacity 
+              style={styles.clearFiltersButton}
+              onPress={clearAllFilters}
+            >
+              <Ionicons name="close" size={16} color="#FF6B35" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+      
       {isFilterVisible && (
         <Modal
           animationType="slide"
@@ -937,37 +995,44 @@ const styles = StyleSheet.create({
   // Filter Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#e0e0e0',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    paddingTop: 20,
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 16,
     paddingHorizontal: 16,
-    maxHeight: '80%',
+    maxHeight: '60%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 8,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
-    paddingHorizontal: 4,
+    paddingHorizontal: 0,
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: '600',
-    color: '#222',
+    fontWeight: '700',
+    color: '#1a1a1a',
+    letterSpacing: -0.3,
   },
   filterSection: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
   filterTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
-    color: '#222',
+    color: '#1a1a1a',
     marginBottom: 12,
+    letterSpacing: -0.2,
   },
   filterOptions: {
     flexDirection: 'row',
@@ -976,28 +1041,38 @@ const styles = StyleSheet.create({
   },
   filterOption: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#f6f6f6',
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: '#f8f9fa',
+    borderWidth: 1,
+    borderColor: '#e9ecef',
     marginHorizontal: 4,
     marginBottom: 8,
+    minWidth: '46%',
+    alignItems: 'center',
   },
   filterOptionSelected: {
     backgroundColor: '#FF6B35',
+    borderColor: '#FF6B35',
   },
   filterOptionText: {
-    color: '#666',
-    fontSize: 14,
+    color: '#495057',
+    fontSize: 13,
+    fontWeight: '500',
+    textAlign: 'center',
   },
   filterOptionTextSelected: {
     color: '#fff',
+    fontWeight: '600',
   },
   ratingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 4,
   },
   starIcon: {
-    marginRight: 8,
+    marginHorizontal: 3,
   },
   toggleContainer: {
     flexDirection: 'row',
@@ -1007,56 +1082,111 @@ const styles = StyleSheet.create({
   },
   toggleText: {
     fontSize: 14,
-    color: '#222',
+    color: '#1a1a1a',
+    fontWeight: '500',
   },
   toggle: {
-    width: 50,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#e0e0e0',
+    width: 44,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#e9ecef',
     padding: 2,
   },
   toggleActive: {
     backgroundColor: '#FF6B35',
   },
   toggleHandle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     backgroundColor: '#fff',
   },
   toggleHandleActive: {
-    transform: [{ translateX: 22 }],
+    transform: [{ translateX: 18 }],
   },
   modalFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 16,
     borderTopWidth: 1,
-    borderTopColor: '#eee',
+    borderTopColor: '#f1f3f4',
+    marginTop: 4,
   },
   resetButton: {
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#FF6B35',
+    borderColor: '#dee2e6',
+    backgroundColor: '#fff',
+    minWidth: 90,
+    alignItems: 'center',
   },
   resetButtonText: {
-    color: '#FF6B35',
-    fontSize: 16,
+    color: '#6c757d',
+    fontSize: 14,
     fontWeight: '600',
   },
   applyButton: {
     paddingVertical: 12,
-    paddingHorizontal: 32,
+    paddingHorizontal: 28,
     borderRadius: 8,
     backgroundColor: '#FF6B35',
+    minWidth: 110,
+    alignItems: 'center',
   },
   applyButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
+  },
+  // New styles for active filters display
+  activeFiltersContainer: {
+    backgroundColor: '#fff5f2',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#FFE4D6',
+  },
+  activeFiltersContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  activeFiltersText: {
+    fontSize: 14,
+    color: '#FF6B35',
+    fontWeight: '600',
+    marginRight: 8,
+  },
+  activeFiltersList: {
+    fontSize: 14,
+    color: '#FF6B35',
+    fontWeight: '500',
+    flex: 1,
+  },
+  clearFiltersButton: {
+    padding: 4,
+    marginLeft: 8,
+  },
+  filterIndicator: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    backgroundColor: '#FF6B35',
+    borderRadius: 8,
+    width: 12,
+    height: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  filterIndicatorDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#fff',
   },
 });
 

@@ -34,6 +34,15 @@ export const API_ENDPOINTS = {
   // Reviews
   REVIEWS: '/api/reviews/',
   
+  // Notifications
+  NOTIFICATIONS: '/api/notifications/',
+  NOTIFICATION_MARK_READ: '/api/notifications/mark-read/{id}/',
+  NOTIFICATION_MARK_ALL_READ: '/api/notifications/mark-all-read/',
+  NOTIFICATION_STATS: '/api/notifications/stats/',
+  PUSH_TOKEN: '/api/push-token/',
+  NOTIFICATION_TOGGLE: '/api/notifications/toggle/',
+  SEND_NOTIFICATION_TO_USER: '/api/notifications/send-to-user/',
+  
   // Chat
   CHAT_WS: '/ws/chat/',
 };

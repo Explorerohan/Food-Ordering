@@ -99,11 +99,16 @@ class NotificationService {
         // Clear existing notifications before syncing with new user
         await this.clearLocalNotifications();
         
+        // Send push token to backend
         await notificationApi.updatePushToken(this.expoPushToken);
         console.log('Push token sent to backend successfully');
+        
+        // Sync notifications with backend
+        await this.syncWithBackend();
+        
         return true;
       } catch (error) {
-        console.error('Failed to send push token to backend:', error);
+        console.error('Error sending push token to backend:', error);
         return false;
       }
     }
@@ -423,72 +428,24 @@ class NotificationService {
     }
   }
 
-  // Update local notification setting cache
+  // Update notification setting (toggle on/off)
   async updateNotificationSetting(enabled) {
-    await AsyncStorage.setItem('notificationsEnabled', JSON.stringify(enabled));
-  }
-
-  // Send push notification (for testing)
-  async sendPushNotification(expoPushToken, title, body, data = {}) {
-    const message = {
-      to: expoPushToken,
-      sound: 'default',
-      title,
-      body,
-      data,
-    };
-
     try {
-      await fetch('https://exp.host/--/api/v2/push/send', {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Accept-encoding': 'gzip, deflate',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(message),
-      });
-    } catch (error) {
-      console.error('Error sending push notification:', error);
-    }
-  }
-
-  // Send test notification from backend
-  async sendTestNotification() {
-    // Check if notifications are enabled
-    const notificationsEnabled = await this.checkNotificationsEnabled();
-    if (!notificationsEnabled) {
-      return false;
-    }
-
-    try {
-      await notificationApi.sendTestNotification();
+      // Update on backend
+      await notificationApi.toggleNotifications(enabled);
+      
+      // Update local cache
+      await AsyncStorage.setItem('notificationsEnabled', JSON.stringify(enabled));
+      
+      console.log(`Notifications ${enabled ? 'enabled' : 'disabled'}`);
       return true;
     } catch (error) {
-      console.error('Error sending test notification:', error);
+      console.error('Error updating notification setting:', error);
       return false;
     }
-  }
-
-  // Send local test notification
-  async sendLocalTestNotification() {
-    // Check if notifications are enabled
-    const notificationsEnabled = await this.checkNotificationsEnabled();
-    if (!notificationsEnabled) {
-      return false;
-    }
-
-    const title = 'Test Notification 🔔';
-    const body = 'This is a test notification from Spicebite!';
-    
-    return await this.showLocalNotification(title, body, {
-      type: 'test',
-      timestamp: new Date().toISOString()
-    });
   }
 }
 
-// Create singleton instance
+// Create and export a singleton instance
 const notificationService = new NotificationService();
-
 export default notificationService; 

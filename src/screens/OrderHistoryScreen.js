@@ -220,13 +220,13 @@ const OrderHistoryScreen = ({ navigation }) => {
   const renderHeader = () => (
     <View style={styles.header}>
       <View style={styles.headerContentRow}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backArrow}> 
-          <Ionicons name="arrow-back" size={24} color="#222" />
+        <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.backArrow, {marginLeft: -12, marginRight: 2}]}>
+          <Ionicons name="arrow-back" size={28} color="#222" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Orders</Text>
         <View style={{ flex: 1 }} />
         <TouchableOpacity onPress={fetchOrders} style={styles.refreshButton}>
-          <Ionicons name="refresh" size={20} color="#666" />
+          <Ionicons name="refresh" size={24} color="#FF6B35" />
         </TouchableOpacity>
       </View>
     </View>
@@ -242,7 +242,7 @@ const OrderHistoryScreen = ({ navigation }) => {
   }
 
   return (
-    <SafeAreaViewContext style={{ flex: 1, backgroundColor: '#f8f9fa' }} edges={["top","left","right"]}>
+    <SafeAreaViewContext style={{ flex: 1, backgroundColor: '#fff' }} edges={["top","left","right"]}>
       <StatusBar style="dark" />
       {renderHeader()}
       <View style={styles.contentContainer}>
@@ -267,15 +267,21 @@ const OrderHistoryScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  contentContainer: { 
+  container: {
     flex: 1,
-    paddingHorizontal: 16,
+    backgroundColor: '#f8f9fa',
+  },
+  contentContainer: { 
+    padding: 16,
+    flex: 1,
+    paddingTop: 0,
+    marginTop: 0,
   },
   centered: { 
     flex: 1, 
     justifyContent: 'center', 
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#fff',
   },
   loadingText: {
     marginTop: 12,
@@ -283,30 +289,40 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   header: {
+    width: '100%',
     backgroundColor: '#fff',
-    paddingVertical: 16,
+    paddingBottom: 8,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
+    borderBottomColor: '#F0F0F0',
   },
   headerContentRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: 0,
+    marginVertical: 0,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 26,
+    fontWeight: 'bold',
     color: '#222',
-    marginLeft: 12,
+    marginLeft: 8,
+    marginVertical: 0,
+    paddingVertical: 0,
   },
   backArrow: {
-    padding: 4,
+    marginRight: 4,
+    marginVertical: 0,
+    paddingVertical: 0,
   },
   refreshButton: {
-    padding: 4,
+    padding: 0,
+    margin: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   ordersList: {
-    paddingVertical: 16,
+    paddingVertical: 0,
   },
   orderCard: {
     backgroundColor: '#fff',

@@ -236,36 +236,19 @@ export const profileApi = {
   },
 };
 
-// Notification API service
+// Add notification API
 export const notificationApi = {
-  // Send push token to backend
-  updatePushToken: async (pushToken) => {
-    try {
-      return await apiCallWithAutoRefresh(async (accessToken) => {
-        const response = await api.post('/api/push-token/', {
-          push_token: pushToken,
-        }, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        return response.data;
-      });
-    } catch (error) {
-      console.error('Error updating push token:', error);
-      throw error;
-    }
-  },
-
-  // Get notifications from backend
+  // Get all notifications for current user
   getNotifications: async () => {
     try {
       return await apiCallWithAutoRefresh(async (accessToken) => {
-        const response = await api.get('/api/notifications/', {
+        const response = await api.get(API_ENDPOINTS.NOTIFICATIONS, {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
         return response.data;
       });
     } catch (error) {
-      console.error('Error fetching notifications:', error);
+      console.error('Error fetching notifications:', error.response ? error.response.data : error.message);
       throw error;
     }
   },
@@ -274,13 +257,14 @@ export const notificationApi = {
   markAsRead: async (notificationId) => {
     try {
       return await apiCallWithAutoRefresh(async (accessToken) => {
-        const response = await api.post(`/api/notifications/mark-read/${notificationId}/`, {}, {
+        const url = API_ENDPOINTS.NOTIFICATION_MARK_READ.replace('{id}', notificationId);
+        const response = await api.post(url, {}, {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
         return response.data;
       });
     } catch (error) {
-      console.error('Error marking notification as read:', error);
+      console.error('Error marking notification as read:', error.response ? error.response.data : error.message);
       throw error;
     }
   },
@@ -289,60 +273,77 @@ export const notificationApi = {
   markAllAsRead: async () => {
     try {
       return await apiCallWithAutoRefresh(async (accessToken) => {
-        const response = await api.post('/api/notifications/mark-all-read/', {}, {
+        const response = await api.post(API_ENDPOINTS.NOTIFICATION_MARK_ALL_READ, {}, {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
         return response.data;
       });
     } catch (error) {
-      console.error('Error marking all notifications as read:', error);
+      console.error('Error marking all notifications as read:', error.response ? error.response.data : error.message);
       throw error;
     }
   },
 
-  // Toggle notifications
-  toggleNotifications: async (enabled) => {
+  // Get notification statistics
+  getNotificationStats: async () => {
     try {
       return await apiCallWithAutoRefresh(async (accessToken) => {
-        const response = await api.post('/api/notifications/toggle/', {
-          notifications_enabled: enabled,
+        const response = await api.get(API_ENDPOINTS.NOTIFICATION_STATS, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        return response.data;
+      });
+    } catch (error) {
+      console.error('Error fetching notification stats:', error.response ? error.response.data : error.message);
+      throw error;
+    }
+  },
+
+  // Update push token
+  updatePushToken: async (pushToken) => {
+    try {
+      return await apiCallWithAutoRefresh(async (accessToken) => {
+        const response = await api.post(API_ENDPOINTS.PUSH_TOKEN, {
+          push_token: pushToken
         }, {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
         return response.data;
       });
     } catch (error) {
-      console.error('Error toggling notifications:', error);
+      console.error('Error updating push token:', error.response ? error.response.data : error.message);
       throw error;
     }
   },
 
-  // Get notification stats
-  getNotificationStats: async () => {
+  // Toggle notifications on/off
+  toggleNotifications: async (enabled) => {
     try {
       return await apiCallWithAutoRefresh(async (accessToken) => {
-        const response = await api.get('/api/notifications/stats/', {
+        const response = await api.post(API_ENDPOINTS.NOTIFICATION_TOGGLE, {
+          notifications_enabled: enabled
+        }, {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
         return response.data;
       });
     } catch (error) {
-      console.error('Error fetching notification stats:', error);
+      console.error('Error toggling notifications:', error.response ? error.response.data : error.message);
       throw error;
     }
   },
 
-  // Send test notification
-  sendTestNotification: async () => {
+  // Send notification to specific user (Admin function)
+  sendNotificationToUser: async (notificationData) => {
     try {
       return await apiCallWithAutoRefresh(async (accessToken) => {
-        const response = await api.post('/api/notifications/test/', {}, {
+        const response = await api.post(API_ENDPOINTS.SEND_NOTIFICATION_TO_USER, notificationData, {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
         return response.data;
       });
     } catch (error) {
-      console.error('Error sending test notification:', error);
+      console.error('Error sending notification to user:', error.response ? error.response.data : error.message);
       throw error;
     }
   },

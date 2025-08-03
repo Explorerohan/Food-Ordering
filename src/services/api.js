@@ -284,6 +284,21 @@ export const notificationApi = {
     }
   },
 
+  // Clear all notifications
+  clearAllNotifications: async () => {
+    try {
+      return await apiCallWithAutoRefresh(async (accessToken) => {
+        const response = await api.delete(API_ENDPOINTS.NOTIFICATION_CLEAR_ALL, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        return response.data;
+      });
+    } catch (error) {
+      console.error('Error clearing all notifications:', error.response ? error.response.data : error.message);
+      throw error;
+    }
+  },
+
   // Get notification statistics
   getNotificationStats: async () => {
     try {

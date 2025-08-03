@@ -71,16 +71,7 @@ const NotificationScreen = ({ navigation }) => {
     );
   };
 
-  const handleTestNotification = async () => {
-    try {
-      const success = await notificationService.sendLocalTestNotification();
-      if (success) {
-        await fetchNotifications();
-      }
-    } catch (error) {
-      console.error('Test notification failed:', error);
-    }
-  };
+
 
   const getNotificationIcon = (type) => {
     switch (type) {
@@ -141,17 +132,16 @@ const NotificationScreen = ({ navigation }) => {
           <Ionicons name="arrow-back" size={28} color="#222" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Notifications</Text>
-        <View style={styles.headerActions}>
-          <TouchableOpacity onPress={handleMarkAllAsRead} style={styles.headerButton}>
-            <Ionicons name="checkmark-done" size={24} color="#FF6B35" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleClearAll} style={styles.headerButton}>
-            <Ionicons name="trash-outline" size={24} color="#FF6B35" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleTestNotification} style={styles.headerButton}>
-            <Ionicons name="bug-outline" size={24} color="#FF6B35" />
-          </TouchableOpacity>
-        </View>
+        {notifications.length > 0 && (
+          <View style={styles.headerActions}>
+            <TouchableOpacity onPress={handleMarkAllAsRead} style={styles.headerButton}>
+              <Ionicons name="checkmark-done" size={24} color="#FF6B35" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleClearAll} style={styles.headerButton}>
+              <Ionicons name="trash-outline" size={24} color="#FF6B35" />
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     </View>
   );

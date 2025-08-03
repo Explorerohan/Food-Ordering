@@ -370,6 +370,15 @@ class NotificationService {
 
   // Clear all notifications
   async clearAllNotifications() {
+    // Clear from backend first
+    try {
+      await notificationApi.clearAllNotifications();
+    } catch (error) {
+      console.error('Error clearing notifications from backend:', error);
+      // Continue with local clearing even if backend fails
+    }
+    
+    // Clear from local storage
     this.notifications = [];
     await this.saveNotifications();
     await Notifications.dismissAllNotificationsAsync();

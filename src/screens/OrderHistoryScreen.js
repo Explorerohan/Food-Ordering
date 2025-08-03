@@ -197,6 +197,26 @@ const OrderHistoryScreen = ({ navigation }) => {
             {getItemCount(item.items)} {getItemCount(item.items) === 1 ? 'item' : 'items'}
           </Text>
         </View>
+        {item.subtotal && (
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryLabel}>Subtotal:</Text>
+            <Text style={styles.summaryValue}>₹{item.subtotal}</Text>
+          </View>
+        )}
+        {item.delivery_charge !== undefined && (
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryLabel}>Delivery:</Text>
+            <Text style={[styles.summaryValue, item.delivery_charge === 0 && styles.freeDeliveryText]}>
+              {item.delivery_charge === 0 ? 'FREE' : `₹${item.delivery_charge}`}
+            </Text>
+          </View>
+        )}
+        {item.distance_km && (
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryLabel}>Distance:</Text>
+            <Text style={styles.summaryValue}>{item.distance_km} km</Text>
+          </View>
+        )}
         <View style={styles.summaryItem}>
           <Text style={styles.summaryLabel}>Total:</Text>
           <Text style={styles.totalAmount}>₹{item.total_amount}</Text>
@@ -274,7 +294,7 @@ const styles = StyleSheet.create({
   contentContainer: { 
     padding: 16,
     flex: 1,
-    paddingTop: 0,
+    paddingTop: 16,
     marginTop: 0,
   },
   centered: { 
@@ -322,7 +342,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   ordersList: {
-    paddingVertical: 0,
+    paddingTop: 8,
+    paddingBottom: 20,
   },
   orderCard: {
     backgroundColor: '#fff',
@@ -403,6 +424,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#FF6B35',
+  },
+  freeDeliveryText: {
+    color: '#4CAF50',
+    fontWeight: 'bold',
   },
   cancelButton: {
     flexDirection: 'row',

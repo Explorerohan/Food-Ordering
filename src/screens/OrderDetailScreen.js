@@ -173,14 +173,35 @@ const OrderDetailScreen = ({ route, navigation }) => {
         {/* Order Summary */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Order Summary</Text>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Subtotal</Text>
-            <Text style={styles.summaryValue}>₹{order.total_amount}</Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Delivery Fee</Text>
-            <Text style={styles.summaryValue}>₹0</Text>
-          </View>
+          {order.subtotal && (
+            <View style={styles.summaryRow}>
+              <View style={styles.summaryLabelContainer}>
+                <Ionicons name="fast-food-outline" size={16} color="#666" style={{ marginRight: 4 }} />
+                <Text style={styles.summaryLabel}>Subtotal</Text>
+              </View>
+              <Text style={styles.summaryValue}>₹{order.subtotal}</Text>
+            </View>
+          )}
+          {order.delivery_charge !== undefined && (
+            <View style={styles.summaryRow}>
+              <View style={styles.summaryLabelContainer}>
+                <Ionicons name="car-outline" size={16} color="#666" style={{ marginRight: 4 }} />
+                <Text style={styles.summaryLabel}>Delivery Fee</Text>
+              </View>
+              <Text style={[styles.summaryValue, order.delivery_charge === 0 && styles.freeDeliveryText]}>
+                {order.delivery_charge === 0 ? 'FREE' : `₹${order.delivery_charge}`}
+              </Text>
+            </View>
+          )}
+          {order.distance_km && (
+            <View style={styles.summaryRow}>
+              <View style={styles.summaryLabelContainer}>
+                <Ionicons name="location-outline" size={16} color="#666" style={{ marginRight: 4 }} />
+                <Text style={styles.summaryLabel}>Distance</Text>
+              </View>
+              <Text style={styles.summaryValue}>{order.distance_km} km</Text>
+            </View>
+          )}
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Tax</Text>
             <Text style={styles.summaryValue}>₹0</Text>
@@ -393,6 +414,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
+  summaryLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   summaryValue: {
     fontSize: 14,
     color: '#222',
@@ -413,6 +438,10 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#FF6B35',
+  },
+  freeDeliveryText: {
+    color: '#4CAF50',
+    fontWeight: '600',
   },
   infoRow: {
     flexDirection: 'row',

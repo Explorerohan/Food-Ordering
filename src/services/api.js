@@ -236,6 +236,74 @@ export const profileApi = {
   },
 };
 
+// Order API service
+export const orderApi = {
+  // Get delivery estimate
+  getDeliveryEstimate: async (latitude, longitude, subtotal) => {
+    try {
+      return await apiCallWithAutoRefresh(async (accessToken) => {
+        const response = await api.post(API_ENDPOINTS.DELIVERY_ESTIMATE, {
+          latitude,
+          longitude,
+          subtotal,
+        }, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        return response.data;
+      });
+    } catch (error) {
+      console.error('Error getting delivery estimate:', error.response ? error.response.data : error.message);
+      throw error;
+    }
+  },
+
+  // Create order
+  createOrder: async (orderData) => {
+    try {
+      return await apiCallWithAutoRefresh(async (accessToken) => {
+        const response = await api.post(API_ENDPOINTS.ORDERS, orderData, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        return response.data;
+      });
+    } catch (error) {
+      console.error('Error creating order:', error.response ? error.response.data : error.message);
+      throw error;
+    }
+  },
+
+  // Get orders
+  getOrders: async () => {
+    try {
+      return await apiCallWithAutoRefresh(async (accessToken) => {
+        const response = await api.get(API_ENDPOINTS.ORDERS, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        return response.data;
+      });
+    } catch (error) {
+      console.error('Error fetching orders:', error.response ? error.response.data : error.message);
+      throw error;
+    }
+  },
+
+  // Cancel order
+  cancelOrder: async (orderId) => {
+    try {
+      return await apiCallWithAutoRefresh(async (accessToken) => {
+        const url = API_ENDPOINTS.ORDER_CANCEL.replace('{id}', orderId);
+        const response = await api.post(url, {}, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        return response.data;
+      });
+    } catch (error) {
+      console.error('Error cancelling order:', error.response ? error.response.data : error.message);
+      throw error;
+    }
+  },
+};
+
 // Add notification API
 export const notificationApi = {
   // Get all notifications for current user

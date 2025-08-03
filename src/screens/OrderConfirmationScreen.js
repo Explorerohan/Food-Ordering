@@ -5,6 +5,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView as SafeAreaViewContext } from 'react-native-safe-area-context';
 import { getApiUrl, API_ENDPOINTS } from '../config/apiConfig';
+import { orderApi } from '../services/api';
 import notificationService from '../services/notificationService';
 
 // Helper function to refresh access token
@@ -50,6 +51,9 @@ const OrderConfirmationScreen = () => {
   const total = price * quantity;
   const [cartItems, setCartItems] = useState([]);
   const [totalAmount, setTotalAmount] = useState(0);
+  const [deliveryCharge, setDeliveryCharge] = useState(0);
+  const [distance, setDistance] = useState(0);
+  const [isFreeDelivery, setIsFreeDelivery] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const slideAnim = useRef(new Animated.Value(400)).current;
   const dragY = useRef(new Animated.Value(0)).current;
@@ -57,9 +61,34 @@ const OrderConfirmationScreen = () => {
 
   useEffect(() => {
     fetchCartItems();
-    
-
   }, []);
+
+  // Calculate delivery charge when delivery location or total amount changes
+  useEffect(() => {
+    if (deliveryLocation && deliveryLocation.latitude && totalAmount > 0) {
+      calculateDeliveryCharge();
+    }
+  }, [deliveryLocation, totalAmount]);
+
+  const calculateDeliveryCharge = async () => {
+    try {
+      console.log('Calculating delivery charge for location:', deliveryLocation);
+      const deliveryInfo = await orderApi.getDeliveryEstimate(
+        deliveryLocation.latitude,
+        deliveryLocation.longitude,
+        totalAmount
+      );
+      console.log('Delivery info received:', deliveryInfo);
+      setDeliveryCharge(deliveryInfo.delivery_charge);
+      setDistance(deliveryInfo.distance_km);
+      setIsFreeDelivery(deliveryInfo.is_free_delivery);
+    } catch (error) {
+      console.error('Error calculating delivery charge:', error);
+      setDeliveryCharge(0);
+      setDistance(0);
+      setIsFreeDelivery(false);
+    }
+  };
 
   const fetchCartItems = async () => {
     try {
@@ -169,11 +198,12 @@ const OrderConfirmationScreen = () => {
       const transactionId = `SPICEBITE_${Date.now()}`;
       
       // Calculate amounts
-      const tAmt = totalAmount; // Total Amount
+      const finalTotal = totalAmount + deliveryCharge;
+      const tAmt = finalTotal; // Total Amount
       const amt = totalAmount; // Product Amount (actual cost)
       const txAmt = 0; // Tax Amount
       const psc = 0; // Service Charge
-      const pdc = 0; // Delivery Charge
+      const pdc = deliveryCharge; // Delivery Charge
       
       navigation.navigate('EsewaPaymentScreen', {
         tAmt,
@@ -193,7 +223,7 @@ const OrderConfirmationScreen = () => {
         deliveryLocation,
         display_name: deliveryLocation?.display_name || display_name,
         cartItems,
-        tAmt: totalAmount,
+        tAmt: totalAmount + deliveryCharge,
         description: description || 'Cash on Delivery',
         isCod: true, // Flag to indicate this is COD order
       });
@@ -278,19 +308,29 @@ const OrderConfirmationScreen = () => {
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Subtotal:</Text>
-            <Text style={styles.summaryValue}>₹{totalAmount}</Text>
+            <Text style={styles.summaryValue}>₹{totalAmount.toFixed(2)}</Text>
           </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Delivery Fee:</Text>
-            <Text style={styles.summaryValue}>₹0</Text>
-          </View>
+          {deliveryLocation && (
+            <>
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Delivery Charge:</Text>
+                <Text style={[styles.summaryValue, isFreeDelivery && styles.freeDeliveryText]}>
+                  {isFreeDelivery ? 'FREE' : `₹${deliveryCharge.toFixed(2)}`}
+                </Text>
+              </View>
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Distance:</Text>
+                <Text style={styles.summaryValue}>{distance.toFixed(1)} km</Text>
+              </View>
+            </>
+          )}
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Tax:</Text>
             <Text style={styles.summaryValue}>₹0</Text>
           </View>
           <View style={[styles.summaryRow, styles.totalRow]}>
             <Text style={styles.totalLabel}>Total:</Text>
-            <Text style={styles.totalValue}>₹{totalAmount}</Text>
+            <Text style={styles.totalValue}>₹{(totalAmount + deliveryCharge).toFixed(2)}</Text>
           </View>
         </View>
       </ScrollView>
@@ -495,6 +535,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
     fontWeight: '500',
+  },
+  freeDeliveryText: {
+    color: '#4CAF50',
+    fontWeight: '600',
   },
   totalRow: {
     borderTopWidth: 1,

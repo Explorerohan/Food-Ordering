@@ -78,6 +78,14 @@ const PaymentStatusScreen = () => {
         <Text style={{ fontSize: 20, color: '#222', marginTop: 24, fontWeight: 'bold' }}>
           {isCod ? 'Placing Order...' : 'Processing Payment...'}
         </Text>
+        <View style={{ marginTop: 20, alignItems: 'center' }}>
+          <Text style={{ fontSize: 16, color: '#666', marginBottom: 8 }}>
+            Total Amount:
+          </Text>
+          <Text style={{ fontSize: 28, fontWeight: 'bold', color: '#FF6B35' }}>
+            ₹{tAmt?.toFixed(2) || '0.00'}
+          </Text>
+        </View>
       </View>
     );
   }
@@ -113,6 +121,14 @@ const PaymentStatusScreen = () => {
             : 'Your payment and order have been processed. Thank you!'
           }
         </Text>
+        <View style={{ marginBottom: 32, alignItems: 'center' }}>
+          <Text style={{ fontSize: 16, color: '#666', marginBottom: 8 }}>
+            Total Amount Paid:
+          </Text>
+          <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#FF6B35' }}>
+            ₹{tAmt?.toFixed(2) || '0.00'}
+          </Text>
+        </View>
         <TouchableOpacity
           style={{ backgroundColor: '#60bb46', paddingVertical: 14, paddingHorizontal: 40, borderRadius: 8 }}
           onPress={() => navigation.reset({ index: 0, routes: [{ name: 'CartDetails' }] })}

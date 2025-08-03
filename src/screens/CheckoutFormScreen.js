@@ -20,7 +20,18 @@ const CheckoutFormScreen = ({ route, navigation }) => {
   }, [route.params]);
 
   const handlePickLocation = () => {
-    navigation.navigate('MapScreen', { fromCheckout: true, cartItems });
+    // Calculate cart total
+    const cartTotal = cartItems.reduce((sum, item) => {
+      if (item.total_price) {
+        return sum + parseFloat(item.total_price);
+      } else if (item.food_price && item.quantity) {
+        return sum + parseFloat(item.food_price) * item.quantity;
+      }
+      return sum;
+    }, 0);
+    
+    console.log('Navigating to MapScreen with cartTotal:', cartTotal);
+    navigation.navigate('MapScreen', { fromCheckout: true, cartItems, cartTotal });
   };
 
   const handleContinue = () => {

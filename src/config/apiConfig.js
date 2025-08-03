@@ -30,6 +30,7 @@ export const API_ENDPOINTS = {
   // Orders
   ORDERS: '/api/orders/',
   ORDER_CANCEL: '/api/orders/{id}/cancel/',
+  DELIVERY_ESTIMATE: '/api/delivery-estimate/',
   
   // Reviews
   REVIEWS: '/api/reviews/',

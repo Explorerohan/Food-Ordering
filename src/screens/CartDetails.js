@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView as SafeAreaViewContext } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
-import { fetchWithAutoRefresh } from '../services/api';
+import { fetchWithAutoRefresh, orderApi } from '../services/api';
 import { getApiUrl, API_ENDPOINTS } from '../config/apiConfig';
 import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
@@ -18,12 +18,23 @@ const CartDetails = ({ navigation, route }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [total, setTotal] = useState(0);
+  const [deliveryCharge, setDeliveryCharge] = useState(0);
+  const [distance, setDistance] = useState(0);
+  const [isFreeDelivery, setIsFreeDelivery] = useState(false);
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [orderDescription, setOrderDescription] = useState('');
   const [proceeding, setProceeding] = useState(false);
   const [showMapModal, setShowMapModal] = useState(false);
+  const [mapModalTotal, setMapModalTotal] = useState(0);
   const [selectedLocation, setSelectedLocation] = useState(null); // { latitude, longitude }
+  
+  // Debug function to track selectedLocation changes
+  const setSelectedLocationWithLog = (location) => {
+    console.log('setSelectedLocation called with:', location);
+    setSelectedLocation(location);
+  };
+  const [hasDirections, setHasDirections] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState(''); // Move address state to parent
   const [initialRegion, setInitialRegion] = useState({
     latitude: 27.7172, // Default to Kathmandu
@@ -69,14 +80,53 @@ const CartDetails = ({ navigation, route }) => {
     }
   };
 
-  // Update address when selectedLocation changes
-  useEffect(() => {
-    if (selectedLocation) {
-      fetchAddressFromCoords(selectedLocation.latitude, selectedLocation.longitude);
-    } else {
-      setSelectedAddress('');
+  // Calculate delivery charge when location or total changes
+  const calculateDeliveryCharge = async (latitude, longitude, subtotal) => {
+    console.log('=== CALCULATE DELIVERY CHARGE CALLED ===');
+    console.log('Calculating delivery charge with:', { latitude, longitude, subtotal });
+    if (!latitude || !longitude) {
+      console.log('No latitude/longitude provided, returning early');
+      setDeliveryCharge(0);
+      setDistance(0);
+      setIsFreeDelivery(false);
+      setHasDirections(false);
+      return;
     }
-  }, [selectedLocation]);
+
+    try {
+      const deliveryInfo = await orderApi.getDeliveryEstimate(latitude, longitude, subtotal);
+      console.log('Delivery info received:', deliveryInfo);
+      setDeliveryCharge(deliveryInfo.delivery_charge);
+      setDistance(deliveryInfo.distance_km);
+      setIsFreeDelivery(deliveryInfo.is_free_delivery);
+      setHasDirections(true); // Set flag when delivery info is received
+    } catch (error) {
+      console.error('Error calculating delivery charge:', error);
+      setDeliveryCharge(0);
+      setDistance(0);
+      setIsFreeDelivery(false);
+      setHasDirections(false);
+    }
+  };
+
+  // Update address and delivery charge when selectedLocation changes
+  useEffect(() => {
+    console.log('=== USEFFECT TRIGGERED ===');
+    console.log('selectedLocation changed to:', selectedLocation);
+    console.log('total:', total);
+    if (selectedLocation) {
+      console.log('useEffect triggered - selectedLocation:', selectedLocation, 'total:', total);
+      fetchAddressFromCoords(selectedLocation.latitude, selectedLocation.longitude);
+      calculateDeliveryCharge(selectedLocation.latitude, selectedLocation.longitude, total);
+    } else {
+      console.log('No selectedLocation, clearing states');
+      setSelectedAddress('');
+      setDeliveryCharge(0);
+      setDistance(0);
+      setIsFreeDelivery(false);
+      setHasDirections(false);
+    }
+  }, [selectedLocation, total]);
 
   const fetchCart = async (isRefreshing = false) => {
     try {
@@ -107,6 +157,7 @@ const CartDetails = ({ navigation, route }) => {
         }
       });
       setTotal(sum);
+      console.log('Cart total calculated:', sum);
     } catch (error) {
       console.error('Error fetching cart:', error);
       setCartItems([]);
@@ -153,38 +204,23 @@ const CartDetails = ({ navigation, route }) => {
         spice_level: item.spice_level || 'Mild',  // Add spice_level field
       }));
 
-      const response = await fetchWithAutoRefresh(async (accessToken) => {
-        return await fetch(getApiUrl(API_ENDPOINTS.ORDERS), {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({
-            description: orderDescription,
-            latitude: selectedLocation.latitude,
-            longitude: selectedLocation.longitude,
-            delivery_address: selectedAddress,
-            total_amount: total,
-            items: itemsPayload,
-          }),
-        });
-      });
+      const orderData = {
+        description: orderDescription,
+        latitude: selectedLocation.latitude,
+        longitude: selectedLocation.longitude,
+        delivery_address: selectedAddress,
+        payment_method: 'cod', // Default to cash on delivery
+        items: itemsPayload,
+      };
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Backend error on order creation:', errorData);
-        throw new Error('Failed to create order');
-      }
-
-      const result = await response.json();
+      const result = await orderApi.createOrder(orderData);
       setShowCheckoutModal(false);
       setOrderDescription('');
-      setSelectedLocation(null);
+      setSelectedLocationWithLog(null);
       setProceeding(false);
       Alert.alert(
         'Order Placed Successfully! 🎉',
-        `Order #${result.order.id} has been created.\n\nTotal: ₹${result.order.total_amount}\n\nYour cart has been cleared.`,
+        `Order #${result.id} has been created.\n\n📋 Order Summary:\n• Food Total: ₹${result.subtotal}\n• Delivery Charge: ₹${result.delivery_charge}\n• Distance: ${result.distance_km} km\n• Total Paid: ₹${result.total_amount}\n\nYour cart has been cleared.`,
         [
           { 
             text: 'Continue Shopping', 
@@ -328,8 +364,25 @@ const CartDetails = ({ navigation, route }) => {
             />
             <View style={styles.checkoutSection}>
               <View style={styles.totalContainer}>
-                <Text style={styles.totalLabel}>Total</Text>
+                <Text style={styles.totalLabel}>Subtotal</Text>
                 <Text style={styles.totalValue}>₹{total.toFixed(2)}</Text>
+              </View>
+              {selectedLocation && (
+                <>
+                  <View style={styles.deliveryInfoContainer}>
+                    <Text style={styles.deliveryLabel}>Delivery Charge</Text>
+                    <Text style={[styles.deliveryValue, isFreeDelivery && styles.freeDeliveryText]}>
+                      {isFreeDelivery ? 'FREE' : `₹${deliveryCharge.toFixed(2)}`}
+                    </Text>
+                  </View>
+                  <View style={styles.distanceContainer}>
+                    <Text style={styles.distanceLabel}>Distance: {distance.toFixed(1)} km</Text>
+                  </View>
+                </>
+              )}
+              <View style={styles.finalTotalContainer}>
+                <Text style={styles.finalTotalLabel}>Total</Text>
+                <Text style={styles.finalTotalValue}>₹{(total + deliveryCharge).toFixed(2)}</Text>
               </View>
               {cartItems.length > 0 && (
                 <TouchableOpacity 
@@ -383,7 +436,16 @@ const CartDetails = ({ navigation, route }) => {
                 } catch (e) {
                   // fallback to default region if location fails
                 }
+                // Set the current total for the map modal
+                console.log('Opening map modal with total:', total);
+                setMapModalTotal(total);
                 setShowMapModal(true);
+                
+                // Set initial location if current location is available
+                if (currentLocation) {
+                  console.log('Setting initial location from currentLocation:', currentLocation);
+                  setSelectedLocationWithLog(currentLocation);
+                }
               }}
             >
               <Ionicons name="location-outline" size={20} color="#FF6B35" />
@@ -431,13 +493,15 @@ const CartDetails = ({ navigation, route }) => {
               style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
               region={searchRegion}
               onPress={e => {
+                console.log('Map pressed at:', e.nativeEvent.coordinate);
                 const region = {
                   latitude: e.nativeEvent.coordinate.latitude,
                   longitude: e.nativeEvent.coordinate.longitude,
                   latitudeDelta: 0.01,
                   longitudeDelta: 0.01,
                 };
-                setSelectedLocation(e.nativeEvent.coordinate);
+                console.log('Setting selectedLocation from map press:', e.nativeEvent.coordinate);
+                setSelectedLocationWithLog(e.nativeEvent.coordinate);
                 setSearchRegion(region);
                 if (mapRef.current) {
                   mapRef.current.animateToRegion(region, 1000);
@@ -477,7 +541,7 @@ const CartDetails = ({ navigation, route }) => {
                   latitudeDelta: 0.01,
                   longitudeDelta: 0.01,
                 };
-                setSelectedLocation({ latitude: lat, longitude: lng });
+                setSelectedLocationWithLog({ latitude: lat, longitude: lng });
                 setSearchRegion(region);
                 if (mapRef.current) {
                   mapRef.current.animateToRegion(region, 1000);
@@ -541,8 +605,144 @@ const CartDetails = ({ navigation, route }) => {
                 </View>
               )}
             />
-            {/* Buttons at the bottom of the modal */}
-            <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, backgroundColor: 'rgba(255,255,255,0.85)', flexDirection: 'column', alignItems: 'center', zIndex: 20 }}>
+            
+                        {/* Delivery Pricing Display Above Map */}
+            {console.log('Checking if selectedLocation exists:', !!selectedLocation, 'hasDirections:', hasDirections, 'deliveryCharge:', deliveryCharge)}
+            {(selectedLocation || hasDirections || deliveryCharge > 0) && (() => {
+              console.log('=== DELIVERY PRICING CARD DEBUG ===');
+              console.log('selectedLocation:', selectedLocation);
+              console.log('total state:', total);
+              console.log('mapModalTotal:', mapModalTotal);
+              console.log('deliveryCharge:', deliveryCharge);
+              console.log('distance:', distance);
+              console.log('cartItems length:', cartItems?.length);
+              console.log('Cart items:', cartItems);
+              
+              // Calculate total as fallback if state total is 0
+              let calculatedTotal = total;
+              
+              // Try to get total from mapModalTotal first (most reliable)
+              if (mapModalTotal > 0) {
+                calculatedTotal = mapModalTotal;
+                console.log('Using total from mapModalTotal:', calculatedTotal);
+              }
+              // Then try route params
+              else if (route.params?.cartTotal && route.params.cartTotal > 0) {
+                calculatedTotal = route.params.cartTotal;
+                console.log('Using total from route params:', calculatedTotal);
+              }
+              // Then try cart items if still 0
+              else if (total <= 0 && cartItems && cartItems.length > 0) {
+                calculatedTotal = cartItems.reduce((sum, item) => {
+                  console.log('Processing item:', item);
+                  if (item.total_price) {
+                    const itemTotal = parseFloat(item.total_price);
+                    console.log('Using total_price:', itemTotal);
+                    return sum + itemTotal;
+                  } else if (item.food_price && item.quantity) {
+                    const itemTotal = parseFloat(item.food_price) * item.quantity;
+                    console.log('Using food_price * quantity:', itemTotal);
+                    return sum + itemTotal;
+                  } else if (item.price && item.quantity) {
+                    const itemTotal = parseFloat(item.price) * item.quantity;
+                    console.log('Using price * quantity:', itemTotal);
+                    return sum + itemTotal;
+                  }
+                  console.log('No valid price found for item');
+                  return sum;
+                }, 0);
+              }
+              console.log('Final calculated total for map:', calculatedTotal, 'State total:', total);
+              console.log('=== END DELIVERY PRICING CARD DEBUG ===');
+              
+              return (
+                <View style={styles.mapDeliveryChargeDisplay}>
+                  <View style={styles.mapDeliveryChargeContent}>
+                    <View style={styles.mapDeliveryChargeHeaderRow}>
+                      <View style={styles.mapDeliveryChargeHeaderLeft}>
+                        <Ionicons name="restaurant-outline" size={20} color="#FF6B35" />
+                        <Text style={styles.mapDeliveryChargeHeader}>Delivery Pricing</Text>
+                      </View>
+                      <TouchableOpacity onPress={() => setSelectedLocationWithLog(null)}>
+                        <Ionicons name="close" size={20} color="#666" />
+                      </TouchableOpacity>
+                    </View>
+                    
+                    <View style={styles.mapDeliveryChargeSummary}>
+                      <View style={styles.mapDeliveryChargeSummaryItem}>
+                        <Ionicons name="time-outline" size={16} color="#666" />
+                        <Text style={styles.mapDeliveryChargeSummaryText}>
+                          {Math.ceil(distance * 3)} min
+                        </Text>
+                      </View>
+                      <View style={styles.mapDeliveryChargeSummaryItem}>
+                        <Ionicons name="location-outline" size={16} color="#666" />
+                        <Text style={styles.mapDeliveryChargeSummaryText}>
+                          {distance.toFixed(1)} km
+                        </Text>
+                      </View>
+                    </View>
+                    
+                    <View style={styles.mapDeliveryChargeRow}>
+                      <Ionicons name="fast-food-outline" size={20} color="#4CAF50" />
+                      <Text style={styles.mapDeliveryChargeLabel}>Food Total:</Text>
+                      <Text style={styles.mapDeliveryChargeValue}>
+                        ₹{calculatedTotal.toFixed(2)}
+                      </Text>
+                    </View>
+                    <View style={styles.mapDeliveryChargeRow}>
+                      <Ionicons name="car-outline" size={20} color="#FF6B35" />
+                      <Text style={styles.mapDeliveryChargeLabel}>Delivery Charge:</Text>
+                      <Text style={[styles.mapDeliveryChargeValue, isFreeDelivery && styles.freeDeliveryText]}>
+                        {isFreeDelivery ? 'FREE' : `₹${deliveryCharge.toFixed(2)}`}
+                      </Text>
+                    </View>
+                    <View style={[styles.mapDeliveryChargeRow, styles.mapDeliveryChargeTotalRow]}>
+                      <Ionicons name="wallet-outline" size={20} color="#222" />
+                      <Text style={styles.mapDeliveryChargeTotalLabel}>Total to Pay:</Text>
+                      <Text style={styles.mapDeliveryChargeTotal}>₹{(calculatedTotal + deliveryCharge).toFixed(2)}</Text>
+                    </View>
+                  </View>
+                </View>
+              );
+            })()}
+            
+            {/* Order Summary and Buttons at the bottom of the modal */}
+            <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, backgroundColor: 'rgba(255,255,255,0.95)', flexDirection: 'column', alignItems: 'center', zIndex: 20 }}>
+              {/* Order Summary */}
+              {selectedLocation && (() => {
+                const calculatedTotal = total > 0 ? total : cartItems.reduce((sum, item) => {
+                  if (item.total_price) {
+                    return sum + parseFloat(item.total_price);
+                  } else if (item.food_price && item.quantity) {
+                    return sum + parseFloat(item.food_price) * item.quantity;
+                  }
+                  return sum;
+                }, 0);
+                return (
+                <View style={styles.mapOrderSummary}>
+                  <Text style={styles.mapOrderSummaryTitle}>Order Summary</Text>
+                  <View style={styles.mapOrderSummaryRow}>
+                    <Text style={styles.mapOrderSummaryLabel}>Food Total:</Text>
+                    <Text style={styles.mapOrderSummaryValue}>₹{calculatedTotal.toFixed(2)}</Text>
+                  </View>
+                  <View style={styles.mapOrderSummaryRow}>
+                    <Text style={styles.mapOrderSummaryLabel}>Delivery Charge:</Text>
+                    <Text style={[styles.mapOrderSummaryValue, isFreeDelivery && styles.freeDeliveryText]}>
+                      {isFreeDelivery ? 'FREE' : `₹${deliveryCharge.toFixed(2)}`}
+                    </Text>
+                  </View>
+                  <View style={styles.mapOrderSummaryRow}>
+                    <Text style={styles.mapOrderSummaryLabel}>Distance:</Text>
+                    <Text style={styles.mapOrderSummaryValue}>{distance.toFixed(1)} km</Text>
+                  </View>
+                  <View style={[styles.mapOrderSummaryRow, styles.mapOrderSummaryTotal]}>
+                    <Text style={styles.mapOrderSummaryTotalLabel}>Total to Pay:</Text>
+                    <Text style={styles.mapOrderSummaryTotalValue}>₹{(calculatedTotal + deliveryCharge).toFixed(2)}</Text>
+                  </View>
+                </View>
+              );
+              })()}
               <TouchableOpacity
                 style={[styles.modalBtn, { backgroundColor: '#FF6B35', marginBottom: 10, width: '100%' }]}
                 onPress={async () => {
@@ -558,7 +758,7 @@ const CartDetails = ({ navigation, route }) => {
                       maximumAge: 10000,
                       timeout: 20000,
                     });
-                    setSelectedLocation({
+                    setSelectedLocationWithLog({
                       latitude: location.coords.latitude,
                       longitude: location.coords.longitude,
                     });
@@ -868,8 +1068,194 @@ const styles = StyleSheet.create({
   locationBtnText: {
     marginLeft: 8,
     color: '#222',
-    fontSize: 15,
+  },
+  deliveryInfoContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  deliveryLabel: {
+    fontSize: 16,
+    color: '#666',
     fontWeight: '500',
+  },
+  deliveryValue: {
+    fontSize: 16,
+    color: '#222',
+    fontWeight: '600',
+  },
+  freeDeliveryText: {
+    color: '#4CAF50',
+    fontWeight: 'bold',
+  },
+  distanceContainer: {
+    paddingVertical: 4,
+  },
+  distanceLabel: {
+    fontSize: 14,
+    color: '#888',
+    textAlign: 'right',
+  },
+  finalTotalContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderTopWidth: 2,
+    borderTopColor: '#FF6B35',
+    marginTop: 8,
+  },
+  finalTotalLabel: {
+    fontSize: 18,
+    color: '#222',
+    fontWeight: 'bold',
+  },
+  finalTotalValue: {
+    fontSize: 18,
+    color: '#FF6B35',
+    fontWeight: 'bold',
+  },
+  mapOrderSummary: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    width: '100%',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  mapOrderSummaryTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#222',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  mapOrderSummaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  mapOrderSummaryLabel: {
+    fontSize: 15,
+    color: '#666',
+    fontWeight: '500',
+  },
+  mapOrderSummaryValue: {
+    fontSize: 15,
+    color: '#222',
+    fontWeight: '600',
+  },
+  mapOrderSummaryTotal: {
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    marginTop: 8,
+    paddingTop: 12,
+  },
+  mapOrderSummaryTotalLabel: {
+    fontSize: 16,
+    color: '#222',
+    fontWeight: 'bold',
+  },
+  mapOrderSummaryTotalValue: {
+    fontSize: 16,
+    color: '#FF6B35',
+    fontWeight: 'bold',
+  },
+  mapDeliveryChargeDisplay: {
+    position: 'absolute',
+    top: 80,
+    left: 16,
+    right: 16,
+    zIndex: 15,
+  },
+  mapDeliveryChargeContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    borderWidth: 1,
+    borderColor: '#FF6B35',
+  },
+  mapDeliveryChargeHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  mapDeliveryChargeHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  mapDeliveryChargeHeader: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#222',
+    marginLeft: 8,
+  },
+  mapDeliveryChargeSummary: {
+    flexDirection: 'row',
+    backgroundColor: '#f8f9fa',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginBottom: 12,
+    alignSelf: 'flex-start',
+  },
+  mapDeliveryChargeSummaryItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  mapDeliveryChargeSummaryText: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+    marginLeft: 4,
+  },
+  mapDeliveryChargeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  mapDeliveryChargeLabel: {
+    fontSize: 15,
+    color: '#666',
+    fontWeight: '500',
+    marginLeft: 8,
+    flex: 1,
+  },
+  mapDeliveryChargeValue: {
+    fontSize: 15,
+    color: '#222',
+    fontWeight: '600',
+  },
+  mapDeliveryChargeTotalRow: {
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    marginTop: 8,
+    paddingTop: 12,
+  },
+  mapDeliveryChargeTotalLabel: {
+    fontSize: 16,
+    color: '#222',
+    fontWeight: 'bold',
+  },
+  mapDeliveryChargeTotal: {
+    fontSize: 16,
+    color: '#FF6B35',
+    fontWeight: 'bold',
   },
   bigMapModal: {
     backgroundColor: '#fff',

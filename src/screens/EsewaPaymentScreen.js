@@ -60,7 +60,10 @@ const MOCK_ESEWA_HTML = `
         </div>
         
         <div class="amount">
-            Amount: ₹<span id="amount">__AMOUNT__</span>
+            Total Amount: ₹<span id="amount">__AMOUNT__</span>
+            <div style="font-size: 14px; color: #666; margin-top: 8px;">
+                (Food: ₹__FOOD_AMOUNT__ + Delivery: ₹__DELIVERY_AMOUNT__)
+            </div>
         </div>
         
         <!-- Step 1: Phone Number and PIN -->
@@ -175,9 +178,14 @@ const EsewaPaymentScreen = () => {
   // Extract payment details from route params
   const { tAmt, amt, txAmt, psc, pdc, pid, deliveryLocation, description, display_name, cartItems } = route.params;
 
-  // Inject the correct amount into the HTML
-  const amountToShow = amt || tAmt || 0;
-  const paymentHtml = MOCK_ESEWA_HTML.replace('__AMOUNT__', String(amountToShow));
+  // Inject the total amount (including delivery charge) into the HTML
+  const amountToShow = tAmt || amt || 0;
+  const foodAmount = amt || 0;
+  const deliveryAmount = pdc || 0;
+  const paymentHtml = MOCK_ESEWA_HTML
+    .replace('__AMOUNT__', String(amountToShow))
+    .replace('__FOOD_AMOUNT__', String(foodAmount))
+    .replace('__DELIVERY_AMOUNT__', String(deliveryAmount));
 
   const handleNavigationChange = async (navState) => {
     const { url } = navState;
@@ -429,6 +437,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
   },
+
 });
 
 export default EsewaPaymentScreen; 

@@ -4,11 +4,65 @@ import MapView, { Marker, Polyline } from 'react-native-maps';
 import axios from 'axios';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
+import { orderApi } from '../services/api';
 
 const LOCATIONIQ_TOKEN = 'pk.9c9e6ad214f9ff0a5929ee44fa79463c';
 const RESTAURANT_LOCATION = { latitude: 26.663703836851116, longitude: 87.27978374809027 };
 
+// Delivery charge configuration
+const DELIVERY_CHARGES = {
+  base_charge: 50,
+  per_km: 10,
+  max_charge: 200,
+  free_delivery_threshold: 1000,
+};
+
+const calculateDeliveryCharge = (distanceMeters, subtotal) => {
+  const distanceKm = distanceMeters / 1000;
+  
+  // Check if order qualifies for free delivery
+  if (subtotal >= DELIVERY_CHARGES.free_delivery_threshold) {
+    return 'FREE';
+  }
+  
+  // Calculate delivery charge
+  const baseCharge = DELIVERY_CHARGES.base_charge;
+  const distanceCharge = distanceKm * DELIVERY_CHARGES.per_km;
+  let totalCharge = baseCharge + distanceCharge;
+  
+  // Cap at maximum charge
+  if (totalCharge > DELIVERY_CHARGES.max_charge) {
+    totalCharge = DELIVERY_CHARGES.max_charge;
+  }
+  
+  return `₹${totalCharge.toFixed(2)}`;
+};
+
+const calculateTotal = (distanceMeters, subtotal) => {
+  const distanceKm = distanceMeters / 1000;
+  
+  // Check if order qualifies for free delivery
+  if (subtotal >= DELIVERY_CHARGES.free_delivery_threshold) {
+    return subtotal.toFixed(2);
+  }
+  
+  // Calculate delivery charge
+  const baseCharge = DELIVERY_CHARGES.base_charge;
+  const distanceCharge = distanceKm * DELIVERY_CHARGES.per_km;
+  let deliveryCharge = baseCharge + distanceCharge;
+  
+  // Cap at maximum charge
+  if (deliveryCharge > DELIVERY_CHARGES.max_charge) {
+    deliveryCharge = DELIVERY_CHARGES.max_charge;
+  }
+  
+  return (subtotal + deliveryCharge).toFixed(2);
+};
+
 const MapScreen = ({ navigation, route }) => {
+  console.log('MapScreen mounted with route.params:', route.params);
+  console.log('MapScreen cartTotal:', route.params?.cartTotal);
+  
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [selectedLocation, setSelectedLocation] = useState(null);
@@ -17,6 +71,9 @@ const MapScreen = ({ navigation, route }) => {
   const [directionDetails, setDirectionDetails] = useState(null);
   const [showDirections, setShowDirections] = useState(false);
   const [loadingDirections, setLoadingDirections] = useState(false);
+  const [deliveryCharge, setDeliveryCharge] = useState(0);
+  const [distance, setDistance] = useState(0);
+  const [isFreeDelivery, setIsFreeDelivery] = useState(false);
 
   const searchLocation = async (text) => {
     setQuery(text);
@@ -39,6 +96,22 @@ const MapScreen = ({ navigation, route }) => {
       setResults(response.data);
     } catch (error) {
       setResults([]);
+    }
+  };
+
+  const calculateDeliveryCharge = async (latitude, longitude, subtotal) => {
+    try {
+      console.log('MapScreen: Calculating delivery charge for:', { latitude, longitude, subtotal });
+      const deliveryInfo = await orderApi.getDeliveryEstimate(latitude, longitude, subtotal);
+      console.log('MapScreen: Delivery info received:', deliveryInfo);
+      setDeliveryCharge(deliveryInfo.delivery_charge);
+      setDistance(deliveryInfo.distance_km);
+      setIsFreeDelivery(deliveryInfo.is_free_delivery);
+    } catch (error) {
+      console.error('MapScreen: Error calculating delivery charge:', error);
+      setDeliveryCharge(0);
+      setDistance(0);
+      setIsFreeDelivery(false);
     }
   };
 
@@ -94,6 +167,10 @@ const MapScreen = ({ navigation, route }) => {
     
     // Fetch directions from selected location to restaurant
     await fetchDirections(newLocation, RESTAURANT_LOCATION);
+    
+    // Calculate delivery charge
+    const cartTotal = route.params?.cartTotal || 0;
+    await calculateDeliveryCharge(lat, lon, cartTotal);
   };
 
   const handleSelectCurrentLocation = async () => {
@@ -119,6 +196,10 @@ const MapScreen = ({ navigation, route }) => {
       
       // Fetch directions from current location to restaurant
       await fetchDirections(newLocation, RESTAURANT_LOCATION);
+      
+      // Calculate delivery charge
+      const cartTotal = route.params?.cartTotal || 0;
+      await calculateDeliveryCharge(newLocation.latitude, newLocation.longitude, cartTotal);
     } catch (e) {
       Alert.alert('Error', 'Could not get your current location. Please try again.');
     } finally {
@@ -188,6 +269,10 @@ const MapScreen = ({ navigation, route }) => {
     setSelectedLocation(newLocation);
     // Fetch directions from tapped location to restaurant
     await fetchDirections(newLocation, RESTAURANT_LOCATION);
+    
+    // Calculate delivery charge
+    const cartTotal = route.params?.cartTotal || 0;
+    await calculateDeliveryCharge(latitude, longitude, cartTotal);
   };
 
   // Remove duplicates by place_id or display_name
@@ -211,18 +296,18 @@ const MapScreen = ({ navigation, route }) => {
           latitudeDelta: 0.05,
           longitudeDelta: 0.05,
         }}
-        region={selectedLocation ? {
-          latitude: (selectedLocation.latitude + RESTAURANT_LOCATION.latitude) / 2,
-          longitude: (selectedLocation.longitude + RESTAURANT_LOCATION.longitude) / 2,
-          latitudeDelta: Math.max(
-            Math.abs(selectedLocation.latitude - RESTAURANT_LOCATION.latitude) * 1.5,
-            0.01
-          ),
-          longitudeDelta: Math.max(
-            Math.abs(selectedLocation.longitude - RESTAURANT_LOCATION.longitude) * 1.5,
-            0.01
-          ),
-        } : undefined}
+                 region={selectedLocation && selectedLocation.latitude ? {
+           latitude: (selectedLocation.latitude + RESTAURANT_LOCATION.latitude) / 2,
+           longitude: (selectedLocation.longitude + RESTAURANT_LOCATION.longitude) / 2,
+           latitudeDelta: Math.max(
+             Math.abs(selectedLocation.latitude - RESTAURANT_LOCATION.latitude) * 1.5,
+             0.01
+           ),
+           longitudeDelta: Math.max(
+             Math.abs(selectedLocation.longitude - RESTAURANT_LOCATION.longitude) * 1.5,
+             0.01
+           ),
+         } : undefined}
         onPress={handleMapPress}
       >
         <Marker
@@ -241,18 +326,18 @@ const MapScreen = ({ navigation, route }) => {
             anchor={{ x: 0.5, y: 1.0 }}
           />
         )}
-        {routeCoords.length > 0 && (
-          <Polyline
-            coordinates={[
-              { latitude: selectedLocation.latitude, longitude: selectedLocation.longitude },
-              ...routeCoords,
-              { latitude: RESTAURANT_LOCATION.latitude, longitude: RESTAURANT_LOCATION.longitude }
-            ]}
-            strokeColor="#FF6B35"
-            strokeWidth={4}
-            lineDashPattern={[1]}
-          />
-        )}
+                 {routeCoords.length > 0 && selectedLocation && selectedLocation.latitude && (
+           <Polyline
+             coordinates={[
+               { latitude: selectedLocation.latitude, longitude: selectedLocation.longitude },
+               ...routeCoords,
+               { latitude: RESTAURANT_LOCATION.latitude, longitude: RESTAURANT_LOCATION.longitude }
+             ]}
+             strokeColor="#FF6B35"
+             strokeWidth={4}
+             lineDashPattern={[1]}
+           />
+         )}
       </MapView>
 
       {/* Search Container */}
@@ -278,13 +363,13 @@ const MapScreen = ({ navigation, route }) => {
         />
       </View>
 
-      {/* Direction Details Panel */}
-      {showDirections && directionDetails && (
+             {/* Delivery Pricing Panel */}
+       {selectedLocation && selectedLocation.latitude && directionDetails && (
         <View style={styles.directionPanel}>
           <View style={styles.directionHeader}>
-            <Ionicons name="navigate" size={24} color="#FF6B35" />
-            <Text style={styles.directionTitle}>Directions to Restaurant</Text>
-            <TouchableOpacity onPress={() => setShowDirections(false)}>
+            <Ionicons name="restaurant-outline" size={24} color="#FF6B35" />
+            <Text style={styles.directionTitle}>Delivery Pricing</Text>
+            <TouchableOpacity onPress={() => setSelectedLocation(null)}>
               <Ionicons name="close" size={24} color="#666" />
             </TouchableOpacity>
           </View>
@@ -292,27 +377,41 @@ const MapScreen = ({ navigation, route }) => {
           <View style={styles.directionSummary}>
             <View style={styles.summaryItem}>
               <Ionicons name="time-outline" size={20} color="#666" />
-              <Text style={styles.summaryText}>{formatDuration(directionDetails.duration)}</Text>
+              <Text style={styles.summaryText}>{directionDetails ? formatDuration(directionDetails.duration) : 'Calculating...'}</Text>
             </View>
             <View style={styles.summaryItem}>
               <Ionicons name="location-outline" size={20} color="#666" />
-              <Text style={styles.summaryText}>{formatDistance(directionDetails.distance)}</Text>
+              <Text style={styles.summaryText}>{distance > 0 ? `${distance.toFixed(1)} km` : 'Calculating...'}</Text>
             </View>
           </View>
 
-          <ScrollView style={styles.stepsContainer} showsVerticalScrollIndicator={false}>
-            {directionDetails.steps.map((step, index) => (
-              <View key={index} style={styles.stepItem}>
-                <View style={styles.stepNumber}>
-                  <Text style={styles.stepNumberText}>{index + 1}</Text>
-                </View>
-                <View style={styles.stepContent}>
-                  <Text style={styles.stepInstruction}>{step.maneuver.instruction}</Text>
-                  <Text style={styles.stepDistance}>{formatDistance(step.distance)}</Text>
-                </View>
-              </View>
-            ))}
-          </ScrollView>
+          <View style={styles.pricingContainer}>
+            <View style={styles.pricingRow}>
+              <Ionicons name="fast-food-outline" size={20} color="#4CAF50" />
+              <Text style={styles.pricingLabel}>Food Total:</Text>
+              <Text style={styles.pricingValue}>
+                ₹{(() => {
+                  console.log('MapScreen route.params:', route.params);
+                  console.log('MapScreen cartTotal:', route.params?.cartTotal);
+                  return route.params?.cartTotal || 0;
+                })()}
+              </Text>
+            </View>
+            <View style={styles.pricingRow}>
+              <Ionicons name="car-outline" size={20} color="#FF6B35" />
+              <Text style={styles.pricingLabel}>Delivery Charge:</Text>
+              <Text style={[styles.pricingValue, isFreeDelivery && styles.freeDeliveryText]}>
+                {isFreeDelivery ? 'FREE' : `₹${deliveryCharge.toFixed(2)}`}
+              </Text>
+            </View>
+            <View style={[styles.pricingRow, styles.totalRow]}>
+              <Ionicons name="wallet-outline" size={20} color="#222" />
+              <Text style={styles.totalLabel}>Total to Pay:</Text>
+              <Text style={styles.totalValue}>
+                ₹{((route.params?.cartTotal || 0) + deliveryCharge).toFixed(2)}
+              </Text>
+            </View>
+          </View>
         </View>
       )}
 
@@ -484,6 +583,48 @@ const styles = StyleSheet.create({
   stepDistance: {
     fontSize: 12,
     color: '#666',
+  },
+  pricingContainer: {
+    marginTop: 12,
+  },
+  pricingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  pricingLabel: {
+    fontSize: 15,
+    color: '#666',
+    fontWeight: '500',
+    marginLeft: 8,
+    flex: 1,
+  },
+  pricingValue: {
+    fontSize: 15,
+    color: '#222',
+    fontWeight: '600',
+  },
+  freeDeliveryText: {
+    color: '#4CAF50',
+    fontWeight: '600',
+  },
+  totalRow: {
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    marginTop: 8,
+    paddingTop: 12,
+  },
+  totalLabel: {
+    fontSize: 16,
+    color: '#222',
+    fontWeight: 'bold',
+    marginLeft: 8,
+    flex: 1,
+  },
+  totalValue: {
+    fontSize: 16,
+    color: '#FF6B35',
+    fontWeight: 'bold',
   },
   buttonContainer: {
     position: 'absolute',

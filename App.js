@@ -142,6 +142,8 @@ export default function App() {
         await AsyncStorage.setItem(`bio_${id}`, data.bio || '');
         setPhoneNumber(data.phone_number || '');
         await AsyncStorage.setItem(`phoneNumber_${id}`, data.phone_number || '');
+        
+
       }
     } catch (e) {
       console.log('Failed to fetch/store profile details:', e);

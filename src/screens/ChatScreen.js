@@ -12,7 +12,6 @@ const ChatScreen = () => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loadingMessages, setLoadingMessages] = useState(true);
-  const [typingUsers, setTypingUsers] = useState([]);
   const ws = useRef(null);
   const flatListRef = useRef(null);
   const adminUsername = 'admin'; // Change if your admin username is different
@@ -74,18 +73,17 @@ const ChatScreen = () => {
     ws.current.onopen = () => { console.log('WebSocket opened'); };
     ws.current.onmessage = (e) => {
       const data = JSON.parse(e.data);
-      if (data.type === 'typing') {
-        handleTypingIndicator(data);
-      } else if (data.id) {
-        // Remove optimistic message if present
-        setMessages(prev => {
-          const filtered = prev.filter(m => !(typeof m.id === 'string' && m.id.startsWith('temp-') && m.message === data.message));
-          return [...filtered, data];
-        });
-      } else if (data.message && data.message.id) {
+      if (data.message && data.message.id) {
+        // Handle message from WebSocket (both user and admin messages)
         setMessages(prev => {
           const filtered = prev.filter(m => !(typeof m.id === 'string' && m.id.startsWith('temp-') && m.message === data.message.message));
           return [...filtered, data.message];
+        });
+      } else if (data.id) {
+        // Handle direct message object
+        setMessages(prev => {
+          const filtered = prev.filter(m => !(typeof m.id === 'string' && m.id.startsWith('temp-') && m.message === data.message));
+          return [...filtered, data];
         });
       }
     };
@@ -115,22 +113,7 @@ const ChatScreen = () => {
     }
   };
 
-  // Typing indicator
-  const handleTyping = (isTyping) => {
-    if (ws.current && ws.current.readyState === 1) {
-      ws.current.send(JSON.stringify({ type: 'typing', is_typing: isTyping }));
-    }
-  };
-  const handleTypingIndicator = (data) => {
-    setTypingUsers(prev => {
-      if (data.is_typing) {
-        if (!prev.includes(data.user_id)) return [...prev, data.user_id];
-      } else {
-        return prev.filter(id => id !== data.user_id);
-      }
-      return prev;
-    });
-  };
+
 
   // Mark messages as read
   const markMessagesRead = async (ids) => {
@@ -197,17 +180,12 @@ const ChatScreen = () => {
           contentContainerStyle={styles.messagesContainer}
         />
       )}
-      {typingUsers.length > 0 && (
-        <Text style={styles.typingIndicator}>Admin is typing...</Text>
-      )}
+
       <View style={styles.inputBar}>
         <TextInput
           style={styles.input}
           value={input}
-          onChangeText={text => {
-            setInput(text);
-            handleTyping(text.length > 0);
-          }}
+          onChangeText={setInput}
           placeholder="Type a message..."
           placeholderTextColor="#aaa"
         />
@@ -299,12 +277,7 @@ const styles = StyleSheet.create({
     right: 8,
     bottom: 8,
   },
-  typingIndicator: {
-    fontStyle: 'italic',
-    color: '#888',
-    marginLeft: 16,
-    marginBottom: 2,
-  },
+
   inputBar: {
     flexDirection: 'row',
     alignItems: 'center',

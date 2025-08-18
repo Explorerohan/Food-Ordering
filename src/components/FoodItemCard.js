@@ -13,7 +13,10 @@ import { View as RNView } from 'react-native';
 const { width } = Dimensions.get('window');
 
 const FoodItemCard = ({ item, onPress, onAddToCart }) => {
-  const smallSize = item.sizes?.find(s => s.size === 'Small');
+  // Use the cheapest available size price for display (fallback if 'Small' doesn't exist)
+  const displayedSize = Array.isArray(item.sizes) && item.sizes.length > 0
+    ? item.sizes.reduce((min, s) => (Number(s.price) < Number(min.price) ? s : min), item.sizes[0])
+    : null;
   let avgRating = null;
   let reviewCount = 0;
   
@@ -49,7 +52,7 @@ const FoodItemCard = ({ item, onPress, onAddToCart }) => {
         {/* Price row */}
         <View style={styles.row}>
           <Text style={styles.price}>
-            {smallSize ? `Rs. ${smallSize.price}` : 'N/A'}
+            {displayedSize ? `₹${displayedSize.price}` : 'N/A'}
           </Text>
         </View>
         {/* Reviews and cart button row */}

@@ -2,13 +2,13 @@
 // Change the IP address here to switch between different environments
 
 // Base URLs
-export const API_BASE_URL = 'http://192.168.1.90:8000';
-export const WS_BASE_URL = 'ws://192.168.1.90:8000';
+export const API_BASE_URL = 'http://192.168.254.5:8000';
+export const WS_BASE_URL = 'ws://192.168.254.5:8000';
 
 // API Endpoints
 export const API_ENDPOINTS = {
   // Authentication
-  LOGIN: '/api/token/',
+  LOGIN: '/api/Login/',
   REFRESH_TOKEN: '/api/token/refresh/',
   REGISTER: '/api/register/',
   CHANGE_PASSWORD: '/api/change-password/',
